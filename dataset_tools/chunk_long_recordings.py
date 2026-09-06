@@ -5,20 +5,17 @@ from __future__ import annotations
 
 import argparse
 import csv
-import itertools
 import json
 import math
 import re
 import unicodedata
-from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Sequence
 
 AUDIO_SUFFIXES = {".m4a", ".mp3", ".wav", ".flac", ".ogg", ".opus", ".aac"}
 TEXT_SUFFIXES = {".txt", ".text"}
-PREFIX_RE = re.compile(
-    r"^(?:voice|audio|recording|text|transcript)[-_ ]*", re.IGNORECASE
-)
+PREFIX_RE = re.compile(r"^(?:voice|audio|recording|text|transcript)[-_ ]*", re.I)
 NON_WORD_RE = re.compile(r"[^0-9A-Za-z\u0600-\u06ff\s]+")
 CHAR_MAP = str.maketrans({"ي": "ی", "ى": "ی", "ك": "ک", "ة": "ه", "ۀ": "ه"})
 
@@ -220,7 +217,7 @@ def proportional(words: list[str], durations: list[float]) -> list[list[str]]:
         cumulative += duration
         bounds.append(round(len(words) * cumulative / total))
     bounds.append(len(words))
-    return [words[start:end] for start, end in itertools.pairwise(bounds)]
+    return [words[start:end] for start, end in zip(bounds, bounds[1:])]
 
 
 def align(

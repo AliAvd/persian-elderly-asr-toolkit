@@ -15,6 +15,8 @@ This repository contains the data collection, dataset preparation, fine-tuning, 
 
 - `chunk_long_recordings.py`: قطعه‌بندی ضبط‌های بلند با Silero VAD و هم‌ترازی متن مرجع با چانک‌ها به کمک فرضیه موقت ASR. خروجی شامل WAV، متن هم‌نام، manifest و جدول بازبینی است.
 - `build_hf_dataset.py`: ساخت `DatasetDict` استاندارد Hugging Face از manifest، اعمال فیلترهای کیفی و ایجاد تفکیک‌های بدون نشت در سطح فایل مبدأ.
+- `merge_chunk_outputs.py`: ادغام امن یک اجرای افزایشی قطعه‌بندی با خروجی قبلی، همراه با کنترل شناسه‌های تکراری.
+- `common_voice_local.py`: تبدیل نسخهٔ محلی Mozilla Common Voice به `DatasetDict` استاندارد.
 - `jsonl_filtered_converting.py`: ادغام Common Voice، Filimo و داده گنجور، نرمال‌سازی متن و پالایش معلم بر اساس WER برای تولید JSONL مناسب Qwen3-ASR.
 
 ### `text_preprocessor/`
@@ -27,15 +29,26 @@ This repository contains the data collection, dataset preparation, fine-tuning, 
 ### `training/`
 
 - `qwen3_asr_sft.py`: تنظیم دقیق Qwen3-ASR، شامل Dataset/Collator، داده‌افزایی احتمالی صوت، تزریق نویز، speed perturbation، افت کیفیت و درج مکث.
+- `wav2vec2_ctc.py`: اسکریپت خط‌فرمان مشترک برای تنظیم دقیق `Wav2Vec2-base` و `Wav2Vec2-XLSR-53` با هدف CTC.
 
 ### `evaluation/`
 
 - `wer_evaluation.py`: استنتاج دسته‌ای Qwen3-ASR، محاسبه WER و CER و ذخیره نمونه‌های دارای WER بالا برای تحلیل خطا.
+- `wav2vec2_evaluation.py`: ارزیابی checkpointهای Wav2Vec2 روی فایل آزمون JSONL و ذخیرهٔ پیش‌بینی‌ها.
 
 ### `serving/`
 
 - `qwen_api.py`: سرویس FastAPI برای Qwen3-ASR همراه با قطعه‌بندی گفتار توسط Silero VAD.
 - `wav2vec2_api.py`: سرویس FastAPI متناظر برای مدل Wav2Vec2-CTC و مقایسه سرویس‌دهی.
+
+### `space/`
+
+- `app.py`: رابط Gradio برای آزمایش تعاملی مدل منتشرشده در Hugging Face Spaces.
+
+### `deployment/`
+
+- `publish_private_hf.py`: انتشار خصوصی دیتاست‌های گنجور و سالمندان و checkpoint استنتاجی.
+- `verify_hf_publish.py`: بررسی وضعیت و فایل‌های مخازن Hugging Face پس از انتشار.
 
 وزن مدل‌ها و checkpointهای آموزش عمداً در این مخزن قرار نگرفته‌اند. مدل Qwen تنظیم‌دقیق‌شده از مخزن خصوصی Hugging Face پروژه قابل دریافت است.
 

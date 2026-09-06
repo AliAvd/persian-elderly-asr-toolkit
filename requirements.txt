@@ -3,6 +3,8 @@ beautifulsoup4
 datasets[audio]
 evaluate
 fastapi
+gradio
+huggingface-hub
 jiwer
 librosa
 numpy

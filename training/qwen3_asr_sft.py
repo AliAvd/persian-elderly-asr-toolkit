@@ -435,31 +435,8 @@ def main():
     model = asr_wrapper.model
     processor = asr_wrapper.processor
 
-    # # Metrics
-    # wer_metric = evaluate.load('wer')
-    # cer_metric = evaluate.load('cer')
-    # def compute_metrics(pred):
-    #     pred_logits = pred.predictions
-    #     label_ids = pred.label_ids
-
-    #     pred_ids = np.argmax(pred_logits, axis=-1)
-    #     label_ids[label_ids == -100] = processor.tokenizer.pad_token_id
-
-    #     pred_str = processor.batch_decode(pred_ids)
-    #     # we do not want to group tokens when computing the metrics
-    #     label_str = processor.batch_decode(label_ids, group_tokens=False)
-
-    #     wer = wer_metric.compute(predictions=pred_str, references=label_str)
-    #     cer = cer_metric.compute(predictions=pred_str, references=label_str)
-
-    #     return {'wer': wer, 'cer': cer}
-
     patch_outer_forward(model)
     model.generation_config = GenerationConfig.from_model_config(model.config)
-
-    # model.freeze_feature_encoder()
-    # model.gradient_checkpointing_enable()
-    # model.config.use_cache = False
 
     raw_ds = load_dataset(
         "json",
@@ -518,48 +495,11 @@ def main():
         report_to="none",
         prediction_loss_only=False,
     )
-    #     training_args = TrainingArguments(
-    #         output_dir = 'Qwen-ASR-finetuning-v1',
-    #         eval_strategy = 'steps',
-    #         # fp16 = True,
-    #         group_by_length = False,
-    #         push_to_hub = False,
-
-    #         gradient_checkpointing = False,
-    #         ddp_find_unused_parameters = True,
-
-    #         per_device_train_batch_size = 4,
-    #         per_device_eval_batch_size = 4,
-    #         # gradient_accumulation_steps = 1,
-    #         weight_decay = 1e-5,
-
-    #         num_train_epochs = 400,
-    #         learning_rate = 5e-5,
-    #         warmup_ratio = 0.02,
-
-    #         logging_steps = 50,
-    #         logging_dir = './logs/runs/qwen-asr-v1',
-    #         report_to = ['tensorboard'],
-
-    #         save_strategy = 'steps',
-    #         save_total_limit = 10,
-    #         metric_for_best_model = 'cer',
-    #         greater_is_better = False,
-    #         load_best_model_at_end = True,
-
-    #         dataloader_persistent_workers = True,
-    #         dataloader_num_workers = 10,
-    #         dataloader_prefetch_factor = 2,
-
-    #         remove_unused_columns=False,
-    # )
-
     trainer = CastFloatInputsTrainer(
         model=model,
         args=training_args,
         train_dataset=ds["train"],
         eval_dataset=ds["validation"],
-        # compute_metrics = compute_metrics,
         data_collator=collator,
         tokenizer=processor.tokenizer,
         callbacks=[

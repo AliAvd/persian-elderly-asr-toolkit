@@ -1,0 +1,35 @@
+{
+  "experiment": "19_ablation_without_frequency/qwen",
+  "mode": "train",
+  "model": {
+    "family": "qwen",
+    "pretrained": "Qwen/Qwen3-ASR-1.7B"
+  },
+  "data": {
+    "train_manifest": "data/manifests/public_elderly/qwen/train.jsonl",
+    "validation_manifest": "data/manifests/public_elderly/qwen/validation.jsonl",
+    "tests": {
+      "public": "data/manifests/public/test.jsonl",
+      "elderly": "data/manifests/elderly/test.jsonl",
+      "ganjoor": "data/manifests/ganjoor/test.jsonl",
+      "filimo": "data/manifests/filimo/test.jsonl",
+      "mozilla": "data/manifests/mozilla/test.jsonl"
+    }
+  },
+  "augmentation": {
+    "enabled": true,
+    "exclude": [
+      "frequency"
+    ],
+    "background_dir": "data/augmentation/background_train",
+    "rir_dir": "data/augmentation/rir_train"
+  },
+  "training": {
+    "output_dir": "outputs/19_ablation_without_frequency/qwen",
+    "epochs": 10,
+    "batch_size": 1,
+    "gradient_accumulation": 8,
+    "learning_rate": 2e-05,
+    "seed": 42
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "experiment": "04_elderly_only_adaptation/qwen",
+  "mode": "train",
+  "model": {
+    "family": "qwen",
+    "pretrained": "Qwen/Qwen3-ASR-1.7B",
+    "init_checkpoint": "outputs/03_public/qwen/final"
+  },
+  "data": {
+    "train_manifest": "data/manifests/elderly/qwen/train.jsonl",
+    "validation_manifest": "data/manifests/elderly/qwen/validation.jsonl",
+    "tests": {
+      "public": "data/manifests/public/test.jsonl",
+      "elderly": "data/manifests/elderly/test.jsonl",
+      "ganjoor": "data/manifests/ganjoor/test.jsonl",
+      "filimo": "data/manifests/filimo/test.jsonl",
+      "mozilla": "data/manifests/mozilla/test.jsonl"
+    }
+  },
+  "augmentation": {
+    "enabled": false,
+    "exclude": [],
+    "background_dir": "data/augmentation/background_train",
+    "rir_dir": "data/augmentation/rir_train"
+  },
+  "training": {
+    "output_dir": "outputs/04_elderly_only_adaptation/qwen",
+    "epochs": 10,
+    "batch_size": 1,
+    "gradient_accumulation": 8,
+    "learning_rate": 2e-05,
+    "seed": 42
+  }
+}

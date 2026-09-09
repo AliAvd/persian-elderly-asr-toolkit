@@ -35,11 +35,11 @@ def main() -> None:
     )
 
     print("Uploading elderly-speech dataset...")
-    load_from_disk(str(ROOT / "Gathered_Dataset_HF")).push_to_hub(
+    load_from_disk(str(ROOT / "Final_Gathered_Dataset_HF")).push_to_hub(
         ELDERLY_REPO, private=True, max_shard_size="500MB"
     )
     api.upload_folder(
-        folder_path=str(ROOT / "Gathered_Dataset_HF/qwen_jsonl"),
+        folder_path=str(ROOT / "Final_Gathered_Dataset_HF/qwen_jsonl"),
         path_in_repo="qwen_jsonl",
         repo_id=ELDERLY_REPO,
         repo_type="dataset",
@@ -47,7 +47,7 @@ def main() -> None:
     )
     for filename in ("rejected.jsonl", "processing_summary.json", "README.md"):
         api.upload_file(
-            path_or_fileobj=str(ROOT / "Gathered_Dataset_HF" / filename),
+            path_or_fileobj=str(ROOT / "Final_Gathered_Dataset_HF" / filename),
             path_in_repo=filename,
             repo_id=ELDERLY_REPO,
             repo_type="dataset",

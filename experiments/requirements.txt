@@ -1,0 +1,22 @@
+# Direct dependencies observed in experiments/.venv; not a complete lock file.
+# Install torch/torchaudio using a CUDA build appropriate for the target host.
+torch==2.6.0
+torchaudio==2.6.0
+transformers==4.57.6
+qwen-asr==0.0.6
+accelerate==1.12.0
+datasets==3.6.0
+soundfile==0.13.1
+librosa==0.11.0
+audiomentations==0.43.1
+numpy==1.26.4
+scipy==1.16.1
+pyarrow==22.0.0
+silero-vad==6.0.0
+rapidfuzz==3.13.0
+requests==2.34.2
+torchvision==0.21.0
+huggingface-hub==0.36.2
+fast-mp3-augment==0.2.0
+numpy-minmax==0.3.1
+numpy-rms==0.4.2

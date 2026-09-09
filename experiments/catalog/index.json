@@ -1,0 +1,422 @@
+[
+  {
+    "experiment": "01_baseline_public/qwen",
+    "config": "catalog/01_baseline_public/qwen/config.json",
+    "mode": "evaluate",
+    "composition": "public",
+    "augmentation": false
+  },
+  {
+    "experiment": "01_baseline_public/wav2vec2_base",
+    "config": "catalog/01_baseline_public/wav2vec2_base/config.json",
+    "mode": "evaluate",
+    "composition": "public",
+    "augmentation": false
+  },
+  {
+    "experiment": "01_baseline_public/wav2vec2_xlsr",
+    "config": "catalog/01_baseline_public/wav2vec2_xlsr/config.json",
+    "mode": "evaluate",
+    "composition": "public",
+    "augmentation": false
+  },
+  {
+    "experiment": "02_baseline_elderly/qwen",
+    "config": "catalog/02_baseline_elderly/qwen/config.json",
+    "mode": "evaluate",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "02_baseline_elderly/wav2vec2_base",
+    "config": "catalog/02_baseline_elderly/wav2vec2_base/config.json",
+    "mode": "evaluate",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "02_baseline_elderly/wav2vec2_xlsr",
+    "config": "catalog/02_baseline_elderly/wav2vec2_xlsr/config.json",
+    "mode": "evaluate",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "03_public/qwen",
+    "config": "catalog/03_public/qwen/config.json",
+    "mode": "train",
+    "composition": "public",
+    "augmentation": false
+  },
+  {
+    "experiment": "03_public/wav2vec2_base",
+    "config": "catalog/03_public/wav2vec2_base/config.json",
+    "mode": "train",
+    "composition": "public",
+    "augmentation": false
+  },
+  {
+    "experiment": "03_public/wav2vec2_xlsr",
+    "config": "catalog/03_public/wav2vec2_xlsr/config.json",
+    "mode": "train",
+    "composition": "public",
+    "augmentation": false
+  },
+  {
+    "experiment": "04_elderly_only_adaptation/qwen",
+    "config": "catalog/04_elderly_only_adaptation/qwen/config.json",
+    "mode": "train",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "04_elderly_only_adaptation/wav2vec2_base",
+    "config": "catalog/04_elderly_only_adaptation/wav2vec2_base/config.json",
+    "mode": "train",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "04_elderly_only_adaptation/wav2vec2_xlsr",
+    "config": "catalog/04_elderly_only_adaptation/wav2vec2_xlsr/config.json",
+    "mode": "train",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "05_public_elderly/qwen",
+    "config": "catalog/05_public_elderly/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "05_public_elderly/wav2vec2_base",
+    "config": "catalog/05_public_elderly/wav2vec2_base/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "05_public_elderly/wav2vec2_xlsr",
+    "config": "catalog/05_public_elderly/wav2vec2_xlsr/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "06_public_aug/qwen",
+    "config": "catalog/06_public_aug/qwen/config.json",
+    "mode": "train",
+    "composition": "public",
+    "augmentation": true
+  },
+  {
+    "experiment": "06_public_aug/wav2vec2_base",
+    "config": "catalog/06_public_aug/wav2vec2_base/config.json",
+    "mode": "train",
+    "composition": "public",
+    "augmentation": true
+  },
+  {
+    "experiment": "06_public_aug/wav2vec2_xlsr",
+    "config": "catalog/06_public_aug/wav2vec2_xlsr/config.json",
+    "mode": "train",
+    "composition": "public",
+    "augmentation": true
+  },
+  {
+    "experiment": "07_public_elderly_aug/qwen",
+    "config": "catalog/07_public_elderly_aug/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": true
+  },
+  {
+    "experiment": "07_public_elderly_aug/wav2vec2_base",
+    "config": "catalog/07_public_elderly_aug/wav2vec2_base/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": true
+  },
+  {
+    "experiment": "07_public_elderly_aug/wav2vec2_xlsr",
+    "config": "catalog/07_public_elderly_aug/wav2vec2_xlsr/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": true
+  },
+  {
+    "experiment": "08_seniortalk_only_adaptation/qwen",
+    "config": "catalog/08_seniortalk_only_adaptation/qwen/config.json",
+    "mode": "train",
+    "composition": "seniortalk",
+    "augmentation": false
+  },
+  {
+    "experiment": "08_seniortalk_only_adaptation/wav2vec2_base",
+    "config": "catalog/08_seniortalk_only_adaptation/wav2vec2_base/config.json",
+    "mode": "train",
+    "composition": "seniortalk",
+    "augmentation": false
+  },
+  {
+    "experiment": "08_seniortalk_only_adaptation/wav2vec2_xlsr",
+    "config": "catalog/08_seniortalk_only_adaptation/wav2vec2_xlsr/config.json",
+    "mode": "train",
+    "composition": "seniortalk",
+    "augmentation": false
+  },
+  {
+    "experiment": "09_public_senior/qwen",
+    "config": "catalog/09_public_senior/qwen/config.json",
+    "mode": "train",
+    "composition": "public_senior",
+    "augmentation": false
+  },
+  {
+    "experiment": "09_public_senior/wav2vec2_base",
+    "config": "catalog/09_public_senior/wav2vec2_base/config.json",
+    "mode": "train",
+    "composition": "public_senior",
+    "augmentation": false
+  },
+  {
+    "experiment": "09_public_senior/wav2vec2_xlsr",
+    "config": "catalog/09_public_senior/wav2vec2_xlsr/config.json",
+    "mode": "train",
+    "composition": "public_senior",
+    "augmentation": false
+  },
+  {
+    "experiment": "10_public_senior_aug/qwen",
+    "config": "catalog/10_public_senior_aug/qwen/config.json",
+    "mode": "train",
+    "composition": "public_senior",
+    "augmentation": true
+  },
+  {
+    "experiment": "10_public_senior_aug/wav2vec2_base",
+    "config": "catalog/10_public_senior_aug/wav2vec2_base/config.json",
+    "mode": "train",
+    "composition": "public_senior",
+    "augmentation": true
+  },
+  {
+    "experiment": "10_public_senior_aug/wav2vec2_xlsr",
+    "config": "catalog/10_public_senior_aug/wav2vec2_xlsr/config.json",
+    "mode": "train",
+    "composition": "public_senior",
+    "augmentation": true
+  },
+  {
+    "experiment": "11_public_elderly_senior/qwen",
+    "config": "catalog/11_public_elderly_senior/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly_senior",
+    "augmentation": false
+  },
+  {
+    "experiment": "11_public_elderly_senior/wav2vec2_base",
+    "config": "catalog/11_public_elderly_senior/wav2vec2_base/config.json",
+    "mode": "train",
+    "composition": "public_elderly_senior",
+    "augmentation": false
+  },
+  {
+    "experiment": "11_public_elderly_senior/wav2vec2_xlsr",
+    "config": "catalog/11_public_elderly_senior/wav2vec2_xlsr/config.json",
+    "mode": "train",
+    "composition": "public_elderly_senior",
+    "augmentation": false
+  },
+  {
+    "experiment": "12_public_elderly_senior_aug/qwen",
+    "config": "catalog/12_public_elderly_senior_aug/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly_senior",
+    "augmentation": true
+  },
+  {
+    "experiment": "12_public_elderly_senior_aug/wav2vec2_base",
+    "config": "catalog/12_public_elderly_senior_aug/wav2vec2_base/config.json",
+    "mode": "train",
+    "composition": "public_elderly_senior",
+    "augmentation": true
+  },
+  {
+    "experiment": "12_public_elderly_senior_aug/wav2vec2_xlsr",
+    "config": "catalog/12_public_elderly_senior_aug/wav2vec2_xlsr/config.json",
+    "mode": "train",
+    "composition": "public_elderly_senior",
+    "augmentation": true
+  },
+  {
+    "experiment": "13_ablation_without_speed/qwen",
+    "config": "catalog/13_ablation_without_speed/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": true
+  },
+  {
+    "experiment": "14_ablation_without_pause/qwen",
+    "config": "catalog/14_ablation_without_pause/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": true
+  },
+  {
+    "experiment": "15_ablation_without_background/qwen",
+    "config": "catalog/15_ablation_without_background/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": true
+  },
+  {
+    "experiment": "16_ablation_without_rir/qwen",
+    "config": "catalog/16_ablation_without_rir/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": true
+  },
+  {
+    "experiment": "17_ablation_without_gain/qwen",
+    "config": "catalog/17_ablation_without_gain/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": true
+  },
+  {
+    "experiment": "18_ablation_without_distortion/qwen",
+    "config": "catalog/18_ablation_without_distortion/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": true
+  },
+  {
+    "experiment": "19_ablation_without_frequency/qwen",
+    "config": "catalog/19_ablation_without_frequency/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly",
+    "augmentation": true
+  },
+  {
+    "experiment": "20_filter_public_unfiltered/qwen",
+    "config": "catalog/20_filter_public_unfiltered/qwen/config.json",
+    "mode": "train",
+    "composition": "public_unfiltered",
+    "augmentation": false
+  },
+  {
+    "experiment": "21_filter_public_filtered/qwen",
+    "config": "catalog/21_filter_public_filtered/qwen/config.json",
+    "mode": "train",
+    "composition": "public_filtered",
+    "augmentation": false
+  },
+  {
+    "experiment": "22_filter_public_unfiltered_matched/qwen",
+    "config": "catalog/22_filter_public_unfiltered_matched/qwen/config.json",
+    "mode": "train",
+    "composition": "public_unfiltered_matched",
+    "augmentation": false
+  },
+  {
+    "experiment": "23_elderly_volume_025/qwen",
+    "config": "catalog/23_elderly_volume_025/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly_025",
+    "augmentation": true
+  },
+  {
+    "experiment": "24_elderly_volume_050/qwen",
+    "config": "catalog/24_elderly_volume_050/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly_050",
+    "augmentation": true
+  },
+  {
+    "experiment": "25_elderly_volume_075/qwen",
+    "config": "catalog/25_elderly_volume_075/qwen/config.json",
+    "mode": "train",
+    "composition": "public_elderly_075",
+    "augmentation": true
+  },
+  {
+    "experiment": "26_public_without_ganjoor/qwen",
+    "config": "catalog/26_public_without_ganjoor/qwen/config.json",
+    "mode": "train",
+    "composition": "public_without_ganjoor",
+    "augmentation": false
+  },
+  {
+    "experiment": "27_qwen_original_elderly_only/qwen",
+    "config": "catalog/27_qwen_original_elderly_only/qwen/config.json",
+    "mode": "train",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "28_long_recording_direct/qwen",
+    "config": "catalog/28_long_recording_direct/qwen/config.json",
+    "mode": "evaluate",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "28_long_recording_direct/wav2vec2_base",
+    "config": "catalog/28_long_recording_direct/wav2vec2_base/config.json",
+    "mode": "evaluate",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "28_long_recording_direct/wav2vec2_xlsr",
+    "config": "catalog/28_long_recording_direct/wav2vec2_xlsr/config.json",
+    "mode": "evaluate",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "29_long_recording_vad/qwen",
+    "config": "catalog/29_long_recording_vad/qwen/config.json",
+    "mode": "evaluate",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "29_long_recording_vad/wav2vec2_base",
+    "config": "catalog/29_long_recording_vad/wav2vec2_base/config.json",
+    "mode": "evaluate",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "29_long_recording_vad/wav2vec2_xlsr",
+    "config": "catalog/29_long_recording_vad/wav2vec2_xlsr/config.json",
+    "mode": "evaluate",
+    "composition": "elderly",
+    "augmentation": false
+  },
+  {
+    "experiment": "30_noise_evaluation/qwen",
+    "config": "catalog/30_noise_evaluation/qwen/config.json",
+    "mode": "evaluate",
+    "composition": "public",
+    "augmentation": false
+  },
+  {
+    "experiment": "30_noise_evaluation/wav2vec2_base",
+    "config": "catalog/30_noise_evaluation/wav2vec2_base/config.json",
+    "mode": "evaluate",
+    "composition": "public",
+    "augmentation": false
+  },
+  {
+    "experiment": "30_noise_evaluation/wav2vec2_xlsr",
+    "config": "catalog/30_noise_evaluation/wav2vec2_xlsr/config.json",
+    "mode": "evaluate",
+    "composition": "public",
+    "augmentation": false
+  }
+]

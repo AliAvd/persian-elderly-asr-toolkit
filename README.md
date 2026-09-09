@@ -115,3 +115,12 @@ These repositories may be private and require an authenticated Hugging Face acco
 ## Authors
 
 Ali Alvandi — undergraduate project supervised by Hossein Sameti.
+
+
+## Experiment pipeline
+
+`experiments/` includes runners, 60 model configurations covering 30 scenarios, shared training/evaluation code and tests. See [the execution guide](experiments/README.md) for environment setup, data preparation, prerequisite checks, campaign execution and result collection.
+
+`dataset_tools/*final*.py` contains final corpus preparation, validation and publication utilities. `training/qwen3_asr_legacy.py` supplies the reusable definitions imported by the experiment augmentation adapter.
+
+Model weights, datasets, checkpoints, generated results, prediction dumps and thesis files remain local.

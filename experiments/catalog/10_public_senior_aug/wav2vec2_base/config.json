@@ -1,0 +1,34 @@
+{
+  "experiment": "10_public_senior_aug/wav2vec2_base",
+  "mode": "train",
+  "model": {
+    "family": "wav2vec2_base",
+    "pretrained": "facebook/wav2vec2-base"
+  },
+  "data": {
+    "train_manifest": "data/manifests/public_senior/train.jsonl",
+    "validation_manifest": "data/manifests/public_senior/validation.jsonl",
+    "tests": {
+      "public": "data/manifests/public/test.jsonl",
+      "elderly": "data/manifests/elderly/test.jsonl",
+      "ganjoor": "data/manifests/ganjoor/test.jsonl",
+      "filimo": "data/manifests/filimo/test.jsonl",
+      "mozilla": "data/manifests/mozilla/test.jsonl",
+      "seniortalk": "data/manifests/seniortalk/test.jsonl"
+    }
+  },
+  "augmentation": {
+    "enabled": true,
+    "exclude": [],
+    "background_dir": "data/augmentation/background_train",
+    "rir_dir": "data/augmentation/rir_train"
+  },
+  "training": {
+    "output_dir": "outputs/10_public_senior_aug/wav2vec2_base",
+    "epochs": 10,
+    "batch_size": 4,
+    "gradient_accumulation": 8,
+    "learning_rate": 0.0003,
+    "seed": 42
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "experiment": "04_elderly_only_adaptation/wav2vec2_xlsr",
+  "mode": "train",
+  "model": {
+    "family": "wav2vec2_xlsr",
+    "pretrained": "facebook/wav2vec2-large-xlsr-53",
+    "expand_vocabulary": true,
+    "init_checkpoint": "outputs/03_public/wav2vec2_xlsr/final"
+  },
+  "data": {
+    "train_manifest": "data/manifests/elderly/train.jsonl",
+    "validation_manifest": "data/manifests/elderly/validation.jsonl",
+    "tests": {
+      "public": "data/manifests/public/test.jsonl",
+      "elderly": "data/manifests/elderly/test.jsonl",
+      "ganjoor": "data/manifests/ganjoor/test.jsonl",
+      "filimo": "data/manifests/filimo/test.jsonl",
+      "mozilla": "data/manifests/mozilla/test.jsonl"
+    }
+  },
+  "augmentation": {
+    "enabled": false,
+    "exclude": [],
+    "background_dir": "data/augmentation/background_train",
+    "rir_dir": "data/augmentation/rir_train"
+  },
+  "training": {
+    "output_dir": "outputs/04_elderly_only_adaptation/wav2vec2_xlsr",
+    "epochs": 10,
+    "batch_size": 4,
+    "gradient_accumulation": 8,
+    "learning_rate": 0.0003,
+    "seed": 42
+  }
+}

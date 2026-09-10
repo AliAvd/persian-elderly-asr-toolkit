@@ -1,107 +1,49 @@
-import glob
-import os
-
-from datasets import Audio, load_dataset
-
-ROOT_DIR = "chunks"  # Directory containing subfolders with alignment.csv
-SAMPLE_RATE = 16_000
-
-# --------------------------------------------------
-# 1. Find all alignment.csv files
-# --------------------------------------------------
-csv_files = glob.glob(os.path.join(ROOT_DIR, "*", "alignment.csv"))
-assert len(csv_files) > 0, "No alignment.csv files found!"
-
-print(f"Found {len(csv_files)} CSV files")
-
-# --------------------------------------------------
-# 2. Load all CSVs into one dataset
-# --------------------------------------------------
-dataset = load_dataset(
-    "csv",
-    data_files={"train": csv_files},
-    keep_default_na=False,
-)
+"""Build a local Ganjoor DatasetDict from crawler alignment CSV files."""
+import argparse
+import csv
+from pathlib import Path
 
 
-# --------------------------------------------------
-# 3. Convert audio_path to ABSOLUTE paths
-#    Each audio_path in CSV is assumed to be relative
-#    to the directory containing its alignment.csv
-# --------------------------------------------------
-def make_absolute(example):
-    audio_path = example["audio_path"]
-    # print(audio_path)
-
-    # Remove leading slash if it exists (to avoid treating
-    # a relative path like "/file.mp3" as filesystem root)
-    audio_path = audio_path.removeprefix("/")
-    # print(audio_path)
-
-    # Convert to absolute path
-    example["audio_path"] = os.path.abspath(audio_path)
-    # print(example["audio_path"])
-
-    return example
+def alignment_rows(root):
+    files = sorted(Path(root).glob('*/alignment.csv'))
+    if not files:
+        raise FileNotFoundError(f'No alignment.csv files under {root}')
+    for path in files:
+        with path.open(encoding='utf-8-sig', newline='') as handle:
+            for row in csv.DictReader(handle):
+                audio = Path(row['audio_path']).expanduser()
+                if not audio.is_absolute():
+                    # Existing crawler exports include "chunks/..."; portable CSVs may
+                    # instead store a filename relative to the CSV itself.
+                    candidates = [path.parent / audio, Path.cwd() / audio]
+                    audio = next((p for p in candidates if p.is_file()), candidates[0])
+                yield {'audio': str(audio.resolve()), 'sentence': row['text'],
+                       'speaker_id': row.get('narrator', 'unknown')}
 
 
-dataset = dataset.map(make_absolute)
-print(dataset["train"]["audio_path"])
-
-# --------------------------------------------------
-# 4. Cast to Audio feature
-#    This stores:
-#    {
-#        "bytes": None,
-#        "path": "/absolute/path/to/file.mp3"
-#    }
-# --------------------------------------------------
-dataset = dataset.cast_column("audio_path", Audio(sampling_rate=SAMPLE_RATE))
-
-# --------------------------------------------------
-# 5. Rename columns (Common Voice style)
-# --------------------------------------------------
-rename_map = {
-    "audio_path": "audio",
-    "text": "sentence",
-}
-
-# Rename narrator -> speaker_id only if it exists
-if "narrator" in dataset["train"].column_names:
-    rename_map["narrator"] = "speaker_id"
-
-dataset = dataset.rename_columns(rename_map)
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--chunks-dir', type=Path, default=Path('chunks'))
+    parser.add_argument('--output-dir', type=Path, default=Path('asr_dataset'))
+    args = parser.parse_args()
+    import soundfile as sf
+    from datasets import Audio, Dataset, DatasetDict
+    rows = []; rejected = 0
+    for row in alignment_rows(args.chunks_dir):
+        try:
+            audio, _ = sf.read(row['audio'])
+            if not audio.size:
+                raise ValueError('Empty audio')
+        except (OSError, RuntimeError, ValueError):
+            rejected += 1
+            continue
+        rows.append(row)
+    if not rows:
+        raise ValueError('No decodable audio found in the alignment files')
+    dataset = DatasetDict(train=Dataset.from_list(rows).cast_column('audio', Audio(sampling_rate=16000)))
+    dataset.save_to_disk(str(args.output_dir))
+    print(f'Saved {len(rows)} rows to {args.output_dir}; rejected {rejected} files')
 
 
-# --------------------------------------------------
-# 6. Remove broken audio files
-# --------------------------------------------------
-def is_valid(example):
-    try:
-        # Accessing the array forces decoding
-        _ = example["audio"]["array"]
-        return True
-    except Exception:
-        return False
-
-
-dataset = dataset.filter(is_valid)
-
-# --------------------------------------------------
-# 7. Save dataset
-# --------------------------------------------------
-print(dataset)
-print(dataset["train"][0])
-
-# Example output:
-# {
-#   'audio': {
-#       'bytes': None,
-#       'path': '/absolute/path/to/0000101024.mp3'
-#   },
-#   'sentence': 'از کجا فهمیدی من اومدم؟'
-# }
-
-dataset.save_to_disk("asr_dataset")
-
-print("Dataset saved successfully!")
+if __name__ == '__main__':
+    main()

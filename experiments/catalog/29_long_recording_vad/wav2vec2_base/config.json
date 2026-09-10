@@ -4,8 +4,6 @@
   "model": {
     "family": "wav2vec2_base",
     "pretrained": "facebook/wav2vec2-base",
-    "requires_checkpoint": true,
-    "checkpoint_env": "ASR_WAV2VEC2_BASE_CHECKPOINT",
     "init_checkpoint": "outputs/07_public_elderly_aug/wav2vec2_base/final"
   },
   "data": {

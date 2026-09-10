@@ -22,6 +22,17 @@ The interface accepts an uploaded or microphone-recorded audio file of up to 60 
 
 `AliAvd/qwen3-asr-persian-elderly`
 
+## Deployment
+
+Deploy the contents of `space/` as the root of a Gradio Space; `app_file: app.py` is relative to that root. Install FFmpeg in the runtime. For a private model, configure the Space secret `HF_TOKEN` with read access. `MODEL_ID` overrides the default model and `MAX_AUDIO_SECONDS` changes the default 60-second limit. The model is loaded on the first transcription request.
+
+To run locally from the repository root:
+
+```bash
+pip install -r space/requirements.txt
+python space/app.py
+```
+
 ## Limitations
 
 The free CPU runtime can be slow for a 1.7B-parameter model. Transcriptions may contain errors and must not be treated as authoritative in safety-critical workflows.

@@ -114,11 +114,13 @@ async def analyse(
         await run_in_threadpool(INFERENCE_LOCK.acquire)
         inference_lock_acquired = True
         vad = await run_in_threadpool(get_vad)
-        model = await run_in_threadpool(get_model)
+        model = await run_in_threadpool(get_model) if do_asr else None
 
         def _do_transcribe() -> list[dict[str, float | str]]:
             audio, _ = librosa.load(decoded_audio_path, sr=SAMPLING_RATE, mono=True)
 
+            if audio.size == 0:
+                return []
             peak = np.max(np.abs(audio))
             if peak > 0:
                 audio = audio / peak
@@ -136,33 +138,37 @@ async def analyse(
                 chunks_meta = [{} for _ in range(len(speech_chunks))]
                 if do_asr:
                     chunk_paths = []
-                    for chunk in speech_chunks:
-                        with tempfile.NamedTemporaryFile(
-                            prefix="asr_", suffix=".wav", delete=False
-                        ) as tmp:
-                            audio_chunk = audio[chunk["start"] : chunk["end"]]
-                            sf.write(tmp.name, audio_chunk, SAMPLING_RATE)
-                            chunk_paths.append(tmp.name)
+                    try:
+                        for chunk in speech_chunks:
+                            with tempfile.NamedTemporaryFile(
+                                prefix="asr_", suffix=".wav", delete=False
+                            ) as tmp:
+                                audio_chunk = audio[chunk["start"] : chunk["end"]]
+                                chunk_paths.append(tmp.name)
+                                sf.write(tmp.name, audio_chunk, SAMPLING_RATE)
 
-                    for t_i, chunk_path in enumerate(chunk_paths):
-                        try:
-                            transcription = model.transcribe(
-                                chunk_path, language="Persian"
-                            )
+                        for t_i, chunk_path in enumerate(chunk_paths):
+                            try:
+                                transcription = model.transcribe(
+                                    chunk_path, language="Persian"
+                                )
 
-                            if (
-                                isinstance(transcription, dict)
-                                and "text" in transcription
-                            ):
-                                chunks_meta[t_i]["text"] = transcription["text"]
-                            else:
-                                chunks_meta[t_i]["text"] = str(transcription[0].text)
+                                if (
+                                    isinstance(transcription, dict)
+                                    and "text" in transcription
+                                ):
+                                    chunks_meta[t_i]["text"] = transcription["text"]
+                                else:
+                                    chunks_meta[t_i]["text"] = str(transcription[0].text)
 
-                        except Exception as e:
-                            chunks_meta[t_i]["text"] = f"Transcription error: {e}"
-
-                    for chunk_path in chunk_paths:
-                        os.unlink(chunk_path)
+                            except Exception as e:
+                                chunks_meta[t_i]["text"] = f"Transcription error: {e}"
+                    finally:
+                        for chunk_path in chunk_paths:
+                            try:
+                                os.unlink(chunk_path)
+                            except OSError:
+                                pass
 
                 return [
                     {

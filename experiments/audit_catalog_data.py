@@ -18,6 +18,7 @@ def main():
             except Exception as e:checked[key]={'status':'failed','error':str(e)}
             print(entry['experiment'],checked[key]['status'],flush=True)
         rows.append({'experiment':entry['experiment'],**checked[key]})
+    (ROOT/'data').mkdir(exist_ok=True)
     (ROOT/'data/catalog_audit.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2))
     failures=[r for r in rows if r['status']=='failed']
     print('Passed',sum(r['status']=='passed' for r in rows),'Missing',sum(r['status']=='missing_data' for r in rows),'Failed',len(failures))

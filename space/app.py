@@ -10,7 +10,9 @@ import torch
 from qwen_asr import Qwen3ASRModel
 
 MODEL_ID = os.getenv("MODEL_ID", "AliAvd/qwen3-asr-persian-elderly")
-MAX_AUDIO_SECONDS = 60
+MAX_AUDIO_SECONDS = float(os.getenv("MAX_AUDIO_SECONDS", "60"))
+if MAX_AUDIO_SECONDS <= 0:
+    raise ValueError("MAX_AUDIO_SECONDS must be positive")
 
 
 @lru_cache(maxsize=1)
@@ -49,11 +51,11 @@ def transcribe(audio_path: str | None) -> tuple[str, str]:
 
 with gr.Blocks(title="بازشناسی گفتار فارسی سالمندان") as demo:
     gr.Markdown(
-        """
+        f"""
         # بازشناسی گفتار فارسی سالمندان
 
         نمونه آزمایشی مدل تنظیم‌دقیق‌شده Qwen3-ASR. یک فایل صوتی کوتاه بارگذاری کنید
-        یا با میکروفن صدا ضبط کنید. حداکثر طول ورودی ۶۰ ثانیه است.
+        یا با میکروفن صدا ضبط کنید. حداکثر طول ورودی {MAX_AUDIO_SECONDS:g} ثانیه است.
         """
     )
     audio = gr.Audio(

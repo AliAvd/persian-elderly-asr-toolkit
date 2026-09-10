@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Validate actual final audio/label pairs, provenance, splits, and both loader formats."""
+import os
 from pathlib import Path
 import json,hashlib,sys
 import soundfile as sf
 import numpy as np
-ROOT=Path(__file__).resolve().parents[1];HF=ROOT/'Final_Gathered_Dataset_HF';CH=ROOT/'Final_Gatheres_Dataset_Chunks'
-sys.path.insert(0,str(ROOT/'experiments'))
+ROOT=Path(os.environ.get('ASR_DATA_ROOT', str(Path(__file__).resolve().parents[1]))).expanduser().resolve();HF=ROOT/'Final_Gathered_Dataset_HF';CH=ROOT/'Final_Gatheres_Dataset_Chunks'
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'experiments'))
 from shared.evaluation import normalize
 from shared.dataset_loading import load_training_data
 from datasets import load_from_disk,Audio

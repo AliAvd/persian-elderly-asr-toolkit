@@ -11,7 +11,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 import requests
 
-ASR = Path(__file__).resolve().parents[1]
+ASR = Path(os.environ.get('ASR_DATA_ROOT', str(Path(__file__).resolve().parents[1]))).expanduser().resolve()
 SENIOR_REPO = "BAAI/SeniorTalk"
 SENIOR_REVISION = "d1ddfa691c4b9f434a5e6abb5103e68e1c7280cb"
 API = "https://mozilladatacollective.com/api"

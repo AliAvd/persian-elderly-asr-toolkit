@@ -3,16 +3,17 @@
 No model training. Uncertain automatic alignment is quarantined, never human-verified.
 """
 import argparse, collections, hashlib, json, os, re, subprocess, sys, time
+import os
 from pathlib import Path
 import numpy as np
 import soundfile as sf
-ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT/'experiments'))
+ROOT=Path(os.environ.get('ASR_DATA_ROOT', str(Path(__file__).resolve().parents[1]))).expanduser().resolve()
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'experiments'))
 from shared.evaluation import normalize, distance
 from shared.training import restore_ctc_special_tokens
 CHUNKS=ROOT/'Final_Gatheres_Dataset_Chunks'
 HF=ROOT/'Final_Gathered_Dataset_HF'
-CHECKPOINT=ROOT/'wav2vec2_base/output_ver_1/checkpoint-547500'
+CHECKPOINT=Path(os.environ.get('ASR_WAV2VEC2_BASE_CHECKPOINT', str(ROOT/'wav2vec2_base/output_ver_1/checkpoint-547500'))).expanduser()
 
 def write(path,value):
  path=Path(path);path.parent.mkdir(parents=True,exist_ok=True);tmp=path.with_suffix(path.suffix+'.tmp');tmp.write_text(json.dumps(value,ensure_ascii=False,indent=2));tmp.replace(path)
@@ -30,6 +31,7 @@ def inventory():
   ts=[t for t in a.parent.iterdir() if t.stem.lower()==a.stem.lower() and t.suffix.lower()=='.txt']
   if len(ts)!=1:raise ValueError(f'Expected one paired transcript: {a}')
   rows.append(dict(audio=str(a),text=str(ts[0]),speaker_id=a.parent.name,source_id=a.parent.name+'_'+a.stem.lower(),audio_sha256=sha(a),text_sha256=sha(ts[0])))
+ if not rows:raise FileNotFoundError('No paired M4A/TXT sources under '+str(ROOT/'Final_Gathered_Dataset'))
  assert len({r['source_id'] for r in rows})==len(rows)
  return rows
 
@@ -160,7 +162,7 @@ def export(rows):
  for name in ['qwen_all.jsonl','qwen_al.jsonl']:jsonl(HF/name,allq);jsonl(CHUNKS/name,allq)
  summary={'source_recordings':len(pairs),'source_hours':sum(json.loads(p.read_text())['duration'] for p in (CHUNKS/'sources').glob('*.meta.json'))/3600,'all_chunks':len(rows),'accepted':len(accepted),'rejected':len(rejected),'splits':{s:{'samples':len(v),'hours':sum(r['duration'] for r in v)/3600,'sources':len({r['source_id'] for r in v}),'speakers':sorted({r['speaker_id'] for r in v})} for s,v in splits.items()},'seed':42,'split_policy':'source recording + identical source transcript/audio groups; shared speakers allowed; approximately 80/10/10 by group count within speaker strata; one-recording speaker remains train','speaker_independent':False,'human_verified':False,'alignment_quality_filter':'normalized greedy CTC CER <= 0.45; nonempty supported text; 1–16 seconds; nonzero PCM','alignment_checkpoint':str(CHECKPOINT),'leakage_audit':'disjoint source IDs, source audio hashes, PCM hashes, and duplicate-transcript groups across all splits'}
  write(HF/'processing_summary.json',summary);print(json.dumps(summary,indent=2),flush=True)
- (HF/'README.md').write_text('''---\nlanguage:\n- fa\ntask_categories:\n- automatic-speech-recognition\nconfigs:\n- config_name: default\n  data_files:\n  - split: train\n    path: data/train-*.parquet\n  - split: validation\n    path: data/validation-*.parquet\n  - split: test\n    path: data/test-*.parquet\n---\n# Final gathered Persian elderly speech\n\n80 paired recordings from four speaker folders. Reference transcripts were aligned with a historical Persian Wav2Vec2-base checkpoint, then cut at word boundaries into approximately 8-second chunks (maximum accepted duration 16 seconds). Labels are substrings of the supplied transcripts, not generated ASR labels. Automatic alignments are not human-verified. Uncertain chunks are excluded and listed in rejected.jsonl. Filtering using an ASR model can select easier speech; report this limitation when using this test set.\n\nSplits are deterministic by source recording and identical transcript/audio groups, stratified by speaker where at least three recordings exist. A speaker with only one recording remains in training. Speakers may overlap. These are not speaker-independent results. Full provenance and counts are in processing_summary.json. No license or public redistribution permission is inferred; this repository is private.\n\nUse `datasets.load_dataset("AliAvd/persian-elderly-asr")` for the default embedded-audio Parquet configuration. Local Arrow export: `datasets.load_from_disk("ASR/Final_Gathered_Dataset_HF")`. Qwen requires `language Persian<asr_text>` labels; local files are in qwen_jsonl/. Portable Hub manifests and audio are under portable/; run portable/materialize_qwen.py after snapshot_download to generate absolute local audio paths.\n''')
+ (HF/'README.md').write_text('''---\nlanguage:\n- fa\ntask_categories:\n- automatic-speech-recognition\nconfigs:\n- config_name: default\n  data_files:\n  - split: train\n    path: data/train-*.parquet\n  - split: validation\n    path: data/validation-*.parquet\n  - split: test\n    path: data/test-*.parquet\n---\n# Final gathered Persian elderly speech\n\nPaired source recordings organized in speaker folders; exact counts are recorded in processing_summary.json. Reference transcripts were aligned with a historical Persian Wav2Vec2-base checkpoint, then cut at word boundaries into approximately 8-second chunks (maximum accepted duration 16 seconds). Labels are substrings of the supplied transcripts, not generated ASR labels. Automatic alignments are not human-verified. Uncertain chunks are excluded and listed in rejected.jsonl. Filtering using an ASR model can select easier speech; report this limitation when using this test set.\n\nSplits are deterministic by source recording and identical transcript/audio groups, stratified by speaker where at least three recordings exist. A speaker with only one recording remains in training. Speakers may overlap. These are not speaker-independent results. Full provenance and counts are in processing_summary.json. No license or public redistribution permission is inferred; this repository is private.\n\nUse `datasets.load_dataset("AliAvd/persian-elderly-asr")` for the default embedded-audio Parquet configuration. Local Arrow export: `datasets.load_from_disk("Final_Gathered_Dataset_HF")`. Qwen requires `language Persian<asr_text>` labels; local files are in qwen_jsonl/. Portable Hub manifests and audio are under portable/; run portable/materialize_qwen.py after snapshot_download to generate absolute local audio paths.\n''')
 
 if __name__=='__main__':
  p=argparse.ArgumentParser();p.add_argument('--limit',type=int);a=p.parse_args();build(a.limit)

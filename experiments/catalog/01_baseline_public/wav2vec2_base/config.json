@@ -6,7 +6,7 @@
     "pretrained": "facebook/wav2vec2-base",
     "requires_checkpoint": true,
     "checkpoint_env": "ASR_WAV2VEC2_BASE_CHECKPOINT",
-    "init_checkpoint": "/home/ali/ali/ASR/wav2vec2_base/output_ver_1/checkpoint-547500"
+    "init_checkpoint": "../wav2vec2_base/output_ver_1/checkpoint-547500"
   },
   "data": {
     "train_manifest": null,

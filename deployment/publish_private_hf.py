@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Publish the project's two datasets and inference-only model to private HF repos."""
 
+import argparse
 from pathlib import Path
 
 from datasets import load_from_disk
 from huggingface_hub import HfApi
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 NAMESPACE = "AliAvd"
 GANJOOR_REPO = f"{NAMESPACE}/persian-asr-dataset"
 ELDERLY_REPO = f"{NAMESPACE}/persian-elderly-asr"
@@ -14,6 +15,15 @@ MODEL_REPO = f"{NAMESPACE}/qwen3-asr-persian-elderly"
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--data-root", type=Path, default=ROOT)
+    parser.add_argument("--checkpoint", type=Path, required=True)
+    args = parser.parse_args()
+    root = args.data_root.expanduser().resolve()
+    checkpoint = args.checkpoint.expanduser().resolve()
+    for source in [root / "asr_dataset", root / "Final_Gathered_Dataset_HF", checkpoint]:
+        if not source.is_dir():
+            parser.error(f"Missing source directory: {source}")
     api = HfApi()
     for repo_id, repo_type in (
         (GANJOOR_REPO, "dataset"),
@@ -23,11 +33,11 @@ def main() -> None:
         api.create_repo(repo_id, repo_type=repo_type, private=True, exist_ok=True)
 
     print("Uploading Ganjoor dataset...")
-    load_from_disk(str(ROOT / "asr_dataset")).push_to_hub(
+    load_from_disk(str(root / "asr_dataset")).push_to_hub(
         GANJOOR_REPO, private=True, max_shard_size="500MB"
     )
     api.upload_file(
-        path_or_fileobj=str(ROOT / "asr_dataset/README.md"),
+        path_or_fileobj=str(root / "asr_dataset/README.md"),
         path_in_repo="README.md",
         repo_id=GANJOOR_REPO,
         repo_type="dataset",
@@ -35,11 +45,11 @@ def main() -> None:
     )
 
     print("Uploading elderly-speech dataset...")
-    load_from_disk(str(ROOT / "Final_Gathered_Dataset_HF")).push_to_hub(
+    load_from_disk(str(root / "Final_Gathered_Dataset_HF")).push_to_hub(
         ELDERLY_REPO, private=True, max_shard_size="500MB"
     )
     api.upload_folder(
-        folder_path=str(ROOT / "Final_Gathered_Dataset_HF/qwen_jsonl"),
+        folder_path=str(root / "Final_Gathered_Dataset_HF/qwen_jsonl"),
         path_in_repo="qwen_jsonl",
         repo_id=ELDERLY_REPO,
         repo_type="dataset",
@@ -47,7 +57,7 @@ def main() -> None:
     )
     for filename in ("rejected.jsonl", "processing_summary.json", "README.md"):
         api.upload_file(
-            path_or_fileobj=str(ROOT / "Final_Gathered_Dataset_HF" / filename),
+            path_or_fileobj=str(root / "Final_Gathered_Dataset_HF" / filename),
             path_in_repo=filename,
             repo_id=ELDERLY_REPO,
             repo_type="dataset",
@@ -55,7 +65,6 @@ def main() -> None:
         )
 
     print("Uploading inference-only model...")
-    checkpoint = ROOT / "qwen_asr/qwen3-asr-finetuning-v3/checkpoint-856300"
     inference_files = [
         "README.md",
         "added_tokens.json",
@@ -63,7 +72,9 @@ def main() -> None:
         "config.json",
         "generation_config.json",
         "merges.txt",
-        "model.safetensors",
+        "model*.safetensors",
+        "model.safetensors.index.json",
+        "processor_config.json",
         "preprocessor_config.json",
         "special_tokens_map.json",
         "tokenizer.json",

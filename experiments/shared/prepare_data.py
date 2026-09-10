@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prepare real audio, explicit splits and Qwen/CTC manifests for the catalog."""
 from __future__ import annotations
-import argparse, collections, csv, hashlib, io, json, math, re, shutil
+import argparse, collections, csv, hashlib, io, json, math, os, re, shutil
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
@@ -11,7 +11,7 @@ import soundfile as sf
 from scipy.signal import resample_poly
 
 ROOT=Path(__file__).resolve().parents[1]
-ASR=ROOT.parent
+ASR=Path(os.environ.get('ASR_DATA_ROOT', str(ROOT.parent))).expanduser().resolve()
 DATA=ROOT/'data'
 MAN=DATA/'manifests'
 SPLITS=('train','validation','test')
@@ -94,9 +94,9 @@ def source_jobs(source):
             row=dict(id=f'ganjoor_{i:06}',source=source,source_id=group,speaker_id=' '.join(r.get('speaker_id','unknown').split()),language='Persian',text=r['sentence'],split=group_split(group),original_audio=str(old))
             yield row,r['audio'],2,20
     elif source=='filimo':
-        cache=Path('/home/shared/huggingface/PerSets___filimo-persian-asr/default/1.0.0/69c7d3c82fbcfd8d2bbfda13abf5ba96b2ed6f1d8ff7236402d22528f8210de3')
+        cache=Path(os.environ.get('ASR_FILIMO_CACHE', str(ASR/'datasets/raw/filimo'))).expanduser()
         files=sorted(cache.glob('filimo-persian-asr-unvalidated-*.arrow'))
-        if len(files)!=10:raise FileNotFoundError('Original PerSets Filimo cache shards missing; no other dataset is substituted')
+        if len(files)!=10:raise FileNotFoundError('Expected ten original PerSets Filimo Arrow shards; set ASR_FILIMO_CACHE to their directory')
         for i,r in enumerate(arrow_rows(files)):
             name=Path(r.get('file_name') or r['audio']['path']).stem
             # Filimo filenames contain a five-digit recording prefix then segment number.
@@ -208,7 +208,7 @@ def compose():
 
 def augmentation_assets():
     report={}
-    for kind,folder in [('background',ASR/'qwen_asr/backgrounds'),('rir',ASR/'qwen_asr/Impulses')]:
+    for kind,folder in [('background',Path(os.environ.get('ASR_BACKGROUND_DIR', str(ASR/'qwen_asr/backgrounds'))).expanduser()),('rir',Path(os.environ.get('ASR_RIR_DIR', str(ASR/'qwen_asr/Impulses'))).expanduser())]:
         files=sorted(folder.glob('*.wav'),key=lambda p:hashlib.sha256(p.name.encode()).hexdigest())
         if not files:raise FileNotFoundError(folder)
         test_count=max(1,round(len(files)*.2));report[kind]={}

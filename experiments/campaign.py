@@ -4,11 +4,8 @@ import argparse,csv,datetime,fcntl,json,os,shutil,subprocess,sys,time
 from pathlib import Path
 from run_experiment import ROOT,resolve_config,validate
 
-PYTHON=ROOT/'.venv/bin/python'
+PYTHON=Path(sys.executable)
 DEFAULT=ROOT/'runs/20260908_10epochs'
-BASELINES={
- 'wav2vec2_base':ROOT.parent/'wav2vec2_base/output_ver_1/checkpoint-547500',
- 'wav2vec2_xlsr':ROOT.parent/'wav2vec2_xlsr/output_dir_2/checkpoint-21900'}
 
 def stamp():return datetime.datetime.now(datetime.timezone.utc).isoformat()
 def read(path):return json.loads(Path(path).read_text())
@@ -26,8 +23,10 @@ def prepare(directory):
   t['gradient_accumulation']=t.get('gradient_accumulation',8)*t.get('batch_size',1);t['batch_size']=1
   checkpoint=c['model'].get('init_checkpoint')
   if checkpoint:
-   relative=Path(checkpoint).relative_to(ROOT/'outputs');c['model']['init_checkpoint']=str(directory/'outputs'/relative)
-  if name.startswith(('01_','02_')) and family in BASELINES:c['model']['init_checkpoint']=str(BASELINES[family])
+   # Only checkpoints produced by this campaign are relocated. External baselines stay put.
+   try:relative=Path(checkpoint).relative_to(ROOT/'outputs')
+   except ValueError:pass
+   else:c['model']['init_checkpoint']=str(directory/'outputs'/relative)
   cfg=directory/'configs'/(name+'.json');write(cfg,c)
   dependency=[]
   if name.startswith(('04_','08_')):dependency=['03_public/'+family]
@@ -41,7 +40,7 @@ def prepare(directory):
   jobs.append({'id':name,'kind':c['mode'],'config':str(cfg),'dependencies':dependency,'status':'pending','minimum_free_mb':minimum,'priority':priority,'attempts':0})
  jobs.append({'id':'prepare_teacher_filter','kind':'prepare','dependencies':[],'status':'pending','minimum_free_mb':6000,'priority':40,'attempts':0})
  write(directory/'jobs.json',jobs)
- write(directory/'campaign.json',{'created':stamp(),'epochs':10,'seed':42,'baselines':{k:str(v) for k,v in BASELINES.items()},'gpu_policy':'Only currently free memory; never terminate other users; one campaign job per device','checkpoint_policy':'Final and best model weights saved; optimizer checkpoints omitted to fit campaign on available disk; failed training restarts rather than silently resuming with a fresh optimizer','scope':'60 catalog configurations plus teacher-data preparation; EARS excluded'})
+ write(directory/'campaign.json',{'created':stamp(),'epochs':10,'seed':42,'baselines':{j['id']:read(j['config'])['model'].get('init_checkpoint') for j in jobs if j['id'].startswith(('01_','02_'))},'gpu_policy':'Only currently free memory; never terminate other users; one campaign job per device','checkpoint_policy':'Final and best model weights saved; optimizer checkpoints omitted to fit campaign on available disk; failed training restarts rather than silently resuming with a fresh optimizer','scope':'60 catalog configurations plus teacher-data preparation; EARS excluded'})
  export(directory,jobs)
 
 def export(directory,jobs):

@@ -2,6 +2,9 @@
 import json
 import os
 import warnings
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
@@ -43,110 +46,114 @@ MIN_TEXT_LENGTH: int = 5
 
 # Inference Model Config
 FILTER_CHECKPOINT = os.getenv("FILTER_CHECKPOINT", "AliAvd/qwen3-asr-persian-elderly")
-DEVICE = "cuda:2"
-DTYPE = torch.bfloat16
+DEVICE = os.getenv("FILTER_DEVICE", "cuda:0" if torch.cuda.is_available() else "cpu")
+DTYPE = torch.bfloat16 if DEVICE.startswith("cuda") and torch.cuda.is_bf16_supported() else torch.float32
 WER_THRESHOLD = 0.2
 
 # ==========================================================
 # DATA LOADING & PROCESSING
 # ==========================================================
-## Common Voice
-cv_language = "Persian"
-cv_language_abbr = "fa"
-cv_dataset_name = "mozilla-foundation/common_voice_13_0"
+def prepare_dataset():
+    ## Common Voice
+    cv_language = "Persian"
+    cv_language_abbr = "fa"
+    cv_dataset_name = "mozilla-foundation/common_voice_13_0"
 
-common_voice_ds = load_dataset(
-    cv_dataset_name,
-    cv_language_abbr,
-    split={"train": "train+validation", "test": "test"},
-    **LOAD_DATASET_KWARGS,
-)
-common_voice_ds = common_voice_ds.remove_columns(
-    [
-        "accent",
-        "age",
-        "client_id",
-        "down_votes",
-        "gender",
-        "locale",
-        "segment",
-        "up_votes",
-        "variant",
-    ]
-)
-common_voice_ds = common_voice_ds.cast_column(
-    "audio", Audio(sampling_rate=SAMPLING_RATE, decode=False)
-)
+    common_voice_ds = load_dataset(
+        cv_dataset_name,
+        cv_language_abbr,
+        split={"train": "train+validation", "test": "test"},
+        **LOAD_DATASET_KWARGS,
+    )
+    common_voice_ds = common_voice_ds.remove_columns(
+        [
+            "accent",
+            "age",
+            "client_id",
+            "down_votes",
+            "gender",
+            "locale",
+            "segment",
+            "up_votes",
+            "variant",
+        ]
+    )
+    common_voice_ds = common_voice_ds.cast_column(
+        "audio", Audio(sampling_rate=SAMPLING_RATE, decode=False)
+    )
 
-## Filimo
-filimo_dataset_name = "PerSets/filimo-persian-asr"
-filimo_ds = load_dataset(
-    filimo_dataset_name,
-    split={"train": "unvalidated[:90%]", "test": "unvalidated[90%:]"},
-    **LOAD_DATASET_KWARGS,
-    cache_dir=os.getenv("HF_DATASETS_CACHE"),
-)
-filimo_ds = filimo_ds.remove_columns("file_name")
-filimo_ds = filimo_ds.rename_column("text", "sentence")
-filimo_ds = filimo_ds.cast_column(
-    "audio", Audio(sampling_rate=SAMPLING_RATE, decode=False)
-)
+    ## Filimo
+    filimo_dataset_name = "PerSets/filimo-persian-asr"
+    filimo_ds = load_dataset(
+        filimo_dataset_name,
+        split={"train": "unvalidated[:90%]", "test": "unvalidated[90%:]"},
+        **LOAD_DATASET_KWARGS,
+        cache_dir=os.getenv("HF_DATASETS_CACHE"),
+    )
+    filimo_ds = filimo_ds.remove_columns("file_name")
+    filimo_ds = filimo_ds.rename_column("text", "sentence")
+    filimo_ds = filimo_ds.cast_column(
+        "audio", Audio(sampling_rate=SAMPLING_RATE, decode=False)
+    )
 
-## Ganjoor
-ganjoor_ds = load_dataset(
-    path=os.getenv("GANJOOR_DATASET", "AliAvd/persian-asr-dataset"),
-    split={"train": "train[:90%]", "test": "train[90%:]"},
-    **LOAD_DATASET_KWARGS,
-)
-ganjoor_ds = ganjoor_ds.remove_columns("speaker_id")
-ganjoor_ds = ganjoor_ds.cast_column(
-    "audio", Audio(sampling_rate=SAMPLING_RATE, decode=False)
-)
+    ## Ganjoor
+    ganjoor_ds = load_dataset(
+        path=os.getenv("GANJOOR_DATASET", "AliAvd/persian-asr-dataset"),
+        split={"train": "train[:90%]", "test": "train[90%:]"},
+        **LOAD_DATASET_KWARGS,
+    )
+    ganjoor_ds = ganjoor_ds.remove_columns("speaker_id")
+    ganjoor_ds = ganjoor_ds.cast_column(
+        "audio", Audio(sampling_rate=SAMPLING_RATE, decode=False)
+    )
 
-## Merging Datasets
-all_dss = [common_voice_ds, filimo_ds, ganjoor_ds]
-ds_merged = {}
-for split in ["train", "test"]:
-    ds_merged[split] = concatenate_datasets([ds[split] for ds in all_dss])
-ds_merged = DatasetDict(ds_merged)
+    ## Merging Datasets
+    all_dss = [common_voice_ds, filimo_ds, ganjoor_ds]
+    ds_merged = {}
+    for split in ["train", "test"]:
+        ds_merged[split] = concatenate_datasets([ds[split] for ds in all_dss])
+    ds_merged = DatasetDict(ds_merged)
 
-## Clean merged dataset
-text_preprocessor = TextPreprocessor()
-
-
-def standardize_sentence(item):
-    item["sentence"] = text_preprocessor.standardize(item["sentence"])
-    return item
+    ## Clean merged dataset
+    text_preprocessor = TextPreprocessor()
 
 
-ds_merged = ds_merged.map(standardize_sentence, num_proc=MAP_NUM_PROC)
+    def standardize_sentence(item):
+        item["sentence"] = text_preprocessor.standardize(item["sentence"])
+        return item
 
 
-def is_item_valid(item):
-    try:
-        audio = Audio(sampling_rate=SAMPLING_RATE).decode_example(item["audio"])
-        return bool(
-            MIN_AUDIO_DURATION
-            < len(audio["array"]) / audio["sampling_rate"]
-            <= MAX_AUDIO_DURATION
-            and len(item["sentence"]) > MIN_TEXT_LENGTH
-        )
-    except (OSError, RuntimeError, ValueError, TypeError):
-        return False
+    ds_merged = ds_merged.map(standardize_sentence, num_proc=MAP_NUM_PROC)
 
 
-ds_merged = ds_merged.filter(is_item_valid, num_proc=MAP_NUM_PROC)
+    def is_item_valid(item):
+        try:
+            audio = Audio(sampling_rate=SAMPLING_RATE).decode_example(item["audio"])
+            return bool(
+                MIN_AUDIO_DURATION
+                < len(audio["array"]) / audio["sampling_rate"]
+                <= MAX_AUDIO_DURATION
+                and len(item["sentence"]) > MIN_TEXT_LENGTH
+            )
+        except (OSError, RuntimeError, ValueError, TypeError):
+            return False
 
-# NOTE: Keeping decode=False ensures that extract_audio_path gets
-# the direct disk string path required by model.transcribe()
-ds_merged = ds_merged.cast_column(
-    "audio", Audio(sampling_rate=SAMPLING_RATE, decode=False)
-)
+
+    ds_merged = ds_merged.filter(is_item_valid, num_proc=MAP_NUM_PROC)
+
+    # NOTE: Keeping decode=False ensures that extract_audio_path gets
+    # the direct disk string path required by model.transcribe()
+    ds_merged = ds_merged.cast_column(
+        "audio", Audio(sampling_rate=SAMPLING_RATE, decode=False)
+    )
 
 
-# ==========================================================
-# EXPORT WITH WER FILTERING LOGIC
-# ==========================================================
+    # ==========================================================
+    # EXPORT WITH WER FILTERING LOGIC
+    # ==========================================================
+    return ds_merged
+
+
 def extract_audio_path(sample):
     if "audio" in sample and isinstance(sample["audio"], dict):
         path = sample["audio"].get("path")
@@ -231,6 +238,9 @@ def datasetdict_to_jsonl(
 # EXECUTION
 # ==========================================================
 if __name__ == "__main__":
+    import argparse
+    argparse.ArgumentParser(description="Legacy Common Voice 13 teacher-filtering workflow; use experiments/ for CV26.").parse_args()
+    ds_merged = prepare_dataset()
     # Load your best fine-tuned model for filtering
     print(f"\nLoading filtering model from: {FILTER_CHECKPOINT}")
     filter_model = Qwen3ASRModel.from_pretrained(

@@ -51,7 +51,7 @@ def normalize(text: str) -> str:
 def build_processor(
     dataset: Any, output_dir: Path, sample_rate: int
 ) -> Wav2Vec2Processor:
-    characters = sorted(set(" ".join(dataset["sentence"])))
+    characters = sorted(set(" ".join(dataset["sentence"])) | {" "})
     vocabulary = {character: index for index, character in enumerate(characters)}
     vocabulary["|"] = vocabulary.pop(" ")
     vocabulary["[UNK]"] = len(vocabulary)
@@ -160,6 +160,7 @@ def main() -> None:
         processing_class=processor,
     )
     trainer.train()
+    trainer.save_model(str(args.output_dir))
     processor.save_pretrained(args.output_dir)
 
 

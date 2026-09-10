@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Publish only the validated final dataset to its own private repository."""
+import os
 from pathlib import Path
 import argparse,json,shutil
 from datasets import load_from_disk
 from huggingface_hub import HfApi
-ROOT=Path(__file__).resolve().parents[1];HF=ROOT/'Final_Gathered_Dataset_HF'
+ROOT=Path(os.environ.get('ASR_DATA_ROOT', str(Path(__file__).resolve().parents[1]))).expanduser().resolve();HF=ROOT/'Final_Gathered_Dataset_HF'
 REPO='AliAvd/persian-elderly-asr'
 
 def prepare_portable():
@@ -20,7 +21,8 @@ def prepare_portable():
    manifest.append({**r,'audio':relative.as_posix()})
   for folder,values in [('qwen_jsonl',qwen),('manifests',manifest)]:
    path=portable/folder/(split+'.jsonl');path.parent.mkdir(exist_ok=True);path.write_text(''.join(json.dumps(r,ensure_ascii=False)+'\n' for r in values))
- (portable/'materialize_qwen.py').write_text('''from pathlib import Path
+ (portable/'materialize_qwen.py').write_text('''import os
+from pathlib import Path
 import json
 root=Path(__file__).resolve().parent
 for source in (root/'qwen_jsonl').glob('*.jsonl'):
@@ -39,6 +41,7 @@ for source in (root/'qwen_jsonl').glob('*.jsonl'):
   target=portable/relative;target.parent.mkdir(parents=True,exist_ok=True)
   if not target.exists():target.hardlink_to(source)
   review.append({**r,'audio':relative.as_posix()})
+ (portable/'review').mkdir(exist_ok=True)
  (portable/'review/manifest.jsonl').write_text(''.join(json.dumps(r,ensure_ascii=False)+'\n' for r in review))
  return portable
 
@@ -59,7 +62,7 @@ def main():
   for row in rows:row['audio']='portable/'+row['audio']
   payload=''.join(json.dumps(row,ensure_ascii=False)+'\n' for row in rows).encode()
   api.upload_file(repo_id=REPO,repo_type='dataset',path_or_fileobj=payload,path_in_repo='qwen_jsonl/'+split+'.jsonl',commit_message='Replace legacy Qwen split with final corpus')
- for name in ['README.md','processing_summary.json','validation_report.json','experiment_integration_report.json','rejected.jsonl']:
+ for name in ['README.md','processing_summary.json','validation_report.json','rejected.jsonl']:
   api.upload_file(repo_id=REPO,repo_type='dataset',path_or_fileobj=str(HF/name),path_in_repo=name)
  info=api.repo_info(REPO,repo_type='dataset');(HF/'hub_publish.json').write_text(json.dumps({'repo':REPO,'private':info.private,'revision':info.sha,'url':'https://huggingface.co/datasets/'+REPO},indent=2))
  (HF/'UPLOAD_STATUS.json').write_text(json.dumps({'status':'published','repo':REPO,'private':info.private,'revision':info.sha},indent=2))

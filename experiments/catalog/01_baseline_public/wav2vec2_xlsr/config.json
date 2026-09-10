@@ -6,7 +6,7 @@
     "pretrained": "facebook/wav2vec2-large-xlsr-53",
     "requires_checkpoint": true,
     "checkpoint_env": "ASR_WAV2VEC2_XLSR_CHECKPOINT",
-    "init_checkpoint": "/home/ali/ali/ASR/wav2vec2_xlsr/output_dir_2/checkpoint-21900"
+    "init_checkpoint": "../wav2vec2_xlsr/output_dir_2/checkpoint-21900"
   },
   "data": {
     "train_manifest": null,

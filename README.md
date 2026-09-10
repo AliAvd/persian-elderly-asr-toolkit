@@ -17,7 +17,9 @@ This repository contains the data collection, dataset preparation, fine-tuning, 
 - `build_hf_dataset.py`: ساخت `DatasetDict` استاندارد Hugging Face از manifest، اعمال فیلترهای کیفی و ایجاد تفکیک‌های بدون نشت در سطح فایل مبدأ.
 - `merge_chunk_outputs.py`: ادغام امن یک اجرای افزایشی قطعه‌بندی با خروجی قبلی، همراه با کنترل شناسه‌های تکراری.
 - `common_voice_local.py`: تبدیل نسخهٔ محلی Mozilla Common Voice به `DatasetDict` استاندارد.
-- `jsonl_filtered_converting.py`: ادغام Common Voice، Filimo و داده گنجور، نرمال‌سازی متن و پالایش معلم بر اساس WER برای تولید JSONL مناسب Qwen3-ASR.
+- `jsonl_filtered_converting.py`: مسیر قدیمی پالایش معلم با Common Voice 13، Filimo و گنجور. برای آزمایش‌های فعلی با Common Voice 26 از `experiments/` استفاده کنید؛ این اسکریپت به کش محلی دیتاست‌ها نیاز دارد.
+- `build_final_dataset.py` و `validate_final_dataset.py`: ساخت پیکرهٔ نهایی با هم‌ترازی CTC و بررسی صوت، متن و جدایی تقسیم‌ها.
+- `publish_final_dataset.py` و `verify_final_hub.py`: آماده‌سازی نسخهٔ قابل‌انتقال، انتشار خصوصی و بررسی آن در Hugging Face.
 
 ### `text_preprocessor/`
 
@@ -28,7 +30,7 @@ This repository contains the data collection, dataset preparation, fine-tuning, 
 
 ### `training/`
 
-- `qwen3_asr_sft.py`: تنظیم دقیق Qwen3-ASR، شامل Dataset/Collator، داده‌افزایی احتمالی صوت، تزریق نویز، speed perturbation، افت کیفیت و درج مکث.
+- `qwen3_asr_sft.py`: تنظیم دقیق مستقل Qwen3-ASR؛ داده‌افزایی با `--background-dir` و `--rir-dir` تنظیم یا با `--no-augmentation` غیرفعال می‌شود. خروجی نهایی شامل مدل و processor است.
 - `wav2vec2_ctc.py`: اسکریپت خط‌فرمان مشترک برای تنظیم دقیق `Wav2Vec2-base` و `Wav2Vec2-XLSR-53` با هدف CTC.
 
 ### `evaluation/`
@@ -50,11 +52,11 @@ This repository contains the data collection, dataset preparation, fine-tuning, 
 - `publish_private_hf.py`: انتشار خصوصی دیتاست‌های گنجور و سالمندان و checkpoint استنتاجی.
 - `verify_hf_publish.py`: بررسی وضعیت و فایل‌های مخازن Hugging Face پس از انتشار.
 
-وزن مدل‌ها و checkpointهای آموزش عمداً در این مخزن قرار نگرفته‌اند. مدل Qwen تنظیم‌دقیق‌شده از مخزن خصوصی Hugging Face پروژه قابل دریافت است.
+وزن مدل‌ها و checkpointهای آموزش در این مخزن نیستند. شناسهٔ پیش‌فرض مدل Qwen در بخش مخازن داده و مدل آمده است؛ استفاده از مخزن خصوصی به حساب مجاز نیاز دارد.
 
 ## Installation
 
-Python 3.10 or newer and FFmpeg are recommended.
+Use Python 3.11 or 3.12 and install FFmpeg. Install a PyTorch/torchaudio build appropriate for your CPU or CUDA runtime; the experiment pipeline has its own recorded dependency versions.
 
 ```bash
 python -m venv .venv
@@ -67,7 +69,7 @@ pip install -r requirements.txt
 Build the crawled Ganjoor dataset:
 
 ```bash
-python crawling/creating_dataset.py
+python crawling/creating_dataset.py --chunks-dir chunks --output-dir asr_dataset
 ```
 
 Chunk long elderly recordings:
@@ -95,7 +97,30 @@ CHECKPOINT_PATH=AliAvd/qwen3-asr-persian-elderly \
 uvicorn serving.qwen_api:app --host 0.0.0.0 --port 8080
 ```
 
-Interactive API documentation is available at `/docs`.
+Interactive API documentation is available at `/docs`; upload audio to `POST /analyse`. Set `do_asr=false` for speech boundaries only (the ASR model is not loaded).
+
+Run the Wav2Vec2 API with a standard saved CTC checkpoint containing both model and processor files:
+
+```bash
+WAV2VEC2_CHECKPOINT=/path/to/persian-ctc-checkpoint \
+uvicorn serving.wav2vec2_api:app --host 0.0.0.0 --port 8000
+```
+
+Legacy custom MLP-head checkpoints must first be converted to a compatible model; the server does not reconstruct that historical architecture.
+
+Train a standalone model (JSONL rows need `audio` and `text`):
+
+```bash
+python training/qwen3_asr_sft.py \
+  --train_file /path/to/train.jsonl --eval_file /path/to/validation.jsonl \
+  --output_dir qwen3-asr-finetuning-out --no-augmentation
+
+python training/wav2vec2_ctc.py \
+  --train-jsonl /path/to/train.jsonl --validation-jsonl /path/to/validation.jsonl \
+  --output-dir outputs/wav2vec2
+```
+
+Both trainers save final model and processor files at the requested output directory. For the controlled 30-scenario study, use the experiment pipeline, whose normalization and evaluation policy are documented in [experiments/README.md](experiments/README.md). Standalone evaluator scores are not interchangeable with campaign scores because their normalization policies differ.
 
 ## Data and model repositories
 
@@ -121,6 +146,25 @@ Ali Alvandi — undergraduate project supervised by Hossein Sameti.
 
 `experiments/` includes runners, 60 model configurations covering 30 scenarios, shared training/evaluation code and tests. See [the execution guide](experiments/README.md) for environment setup, data preparation, prerequisite checks, campaign execution and result collection.
 
-`dataset_tools/*final*.py` contains final corpus preparation, validation and publication utilities. `training/qwen3_asr_legacy.py` supplies the reusable definitions imported by the experiment augmentation adapter.
+`dataset_tools/*final*.py` uses `ASR_DATA_ROOT` for the external corpus root (default: repository root). The CTC aligner accepts `ASR_WAV2VEC2_BASE_CHECKPOINT` for its local checkpoint. `training/qwen3_asr_legacy.py` contains only the reusable historical definitions imported by the experiment augmentation adapter; it is not a second executable trainer.
+
+The final corpus workflow expects `Final_Gathered_Dataset/` under the data root, with speaker subfolders containing `.m4a` recordings and matching `.txt` transcripts. It generates `Final_Gatheres_Dataset_Chunks/source_inventory.json` and the chunked/Hugging Face exports. Those source corpus assets are not included. Use the following sequence after configuring local paths:
+
+```bash
+python dataset_tools/build_final_dataset.py
+python dataset_tools/validate_final_dataset.py
+python dataset_tools/publish_final_dataset.py --prepare-only
+```
+
+The last command prepares files locally. Omitting `--prepare-only` uploads to the configured private Hugging Face repository; `verify_final_hub.py` subsequently checks that upload. The older combined publisher requires explicit paths: `python deployment/publish_private_hf.py --data-root /path/to/corpora --checkpoint /path/to/model`.
+
+Run regression tests in the experiment environment (plus the API dependencies for serving tests):
+
+```bash
+pip install fastapi python-multipart httpx
+python -B -m unittest discover -s experiments/tests -v
+```
+
+These tests use tiny CPU fixtures and mocks; they do not validate large-model accuracy or perform Hub publication. The augmentation-assets test skips when its local corpus is unavailable.
 
 Model weights, datasets, checkpoints, generated results, prediction dumps and thesis files remain local.

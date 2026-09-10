@@ -67,3 +67,17 @@ build/
 *.tar
 *.gz
 /dataset_tools/build_artifacts/
+
+# Default directories created by standalone workflows
+/chunks/
+/recordings/
+/elderly_dataset_hf/
+/evaluation_outputs/
+/qwen3-asr-finetuning-out/
+/wav2vec2_base/
+/wav2vec2_xlsr/
+/qwen_asr/
+/backgrounds/
+/Impulses/
+.pytest_cache/
+*.egg-info/

@@ -58,6 +58,8 @@ def load_rows(path: Path) -> list[dict[str, str]]:
 def main() -> None:
     args = arguments()
     rows = load_rows(args.test_jsonl)
+    if not rows:
+        raise ValueError("Test manifest contains no nonempty normalized references")
     processor = Wav2Vec2Processor.from_pretrained(args.checkpoint)
     model = Wav2Vec2ForCTC.from_pretrained(args.checkpoint).to(args.device).eval()
 

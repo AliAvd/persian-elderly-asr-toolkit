@@ -17,10 +17,10 @@ def add(number, name, composition, families=None, aug=False, exclude=None, mode=
         directory = ROOT / relative
         directory.mkdir(parents=True, exist_ok=True)
         model = {'family': family, 'pretrained': MODELS[family]}
-        if mode == 'evaluate' and family != 'qwen':
+        if number in (1, 2) and family != 'qwen':
             model.update(requires_checkpoint=True, checkpoint_env=f'ASR_{family.upper()}_CHECKPOINT')
             baseline='wav2vec2_base/output_ver_1/checkpoint-547500' if family=='wav2vec2_base' else 'wav2vec2_xlsr/output_dir_2/checkpoint-21900'
-            model['init_checkpoint']=str(ROOT.parent/baseline)
+            model['init_checkpoint']='../'+baseline
         if adaptation and family!='qwen': model['expand_vocabulary']=True
         if adaptation:
             model['init_checkpoint'] = f'outputs/03_public/{family}/final'
@@ -44,6 +44,7 @@ def add(number, name, composition, families=None, aug=False, exclude=None, mode=
         rows.append({'experiment': config['experiment'], 'config': relative + '/config.json', 'mode': mode, 'composition': composition, 'augmentation': aug})
 
 def main():
+    rows.clear()
     add(1, 'baseline_public', 'public', mode='evaluate', test_names=['public', 'ganjoor', 'filimo', 'mozilla'])
     add(2, 'baseline_elderly', 'elderly', mode='evaluate', test_names=['elderly'])
     add(3, 'public', 'public')

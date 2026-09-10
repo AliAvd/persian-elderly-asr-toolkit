@@ -141,51 +141,51 @@ class InsertPause(BaseWaveformTransform):
         return np.concatenate(chunks)
 
 
-## Augmentor
-augmentor = auds.Compose(
-    [
-        auds.AddBackgroundNoise("./backgrounds", p=0.75),
-        auds.OneOf(
-            [
-                auds.Gain(p=1.0),
-                auds.GainTransition(
-                    p=1.0, duration_unit="fraction", min_duration=0.2, max_duration=0.9
-                ),
-            ],
-            p=0.8,
-        ),
-        auds.TimeStretch(
-            min_rate=0.8, max_rate=2.0, leave_length_unchanged=False, p=0.9
-        ),
-        InsertPause(
-            min_pause_duration=0.15,
-            max_pause_duration=0.80,
-            min_pauses=1,
-            max_pauses=3,
-            p=0.7,
-        ),
-        auds.ApplyImpulseResponse(
-            ir_path="./Impulses", leave_length_unchanged=False, p=0.5
-        ),
-        auds.OneOf(
-            [
-                auds.BitCrush(p=1.0),
-                auds.AddGaussianSNR(p=1.0),
-                auds.TanhDistortion(p=1.0),
-                auds.Mp3Compression(quality=5, p=1.0),
-            ],
-            p=0.8,
-        ),
-        auds.OneOf(
-            [
-                auds.HighPassFilter(p=1.0),
-                auds.BandPassFilter(p=1.0),
-            ],
-            p=0.8,
-        ),
-    ],
-    p=AUG_PROB,
-)
+def build_augmentor(background_dir, rir_dir):
+    return auds.Compose(
+        [
+            auds.AddBackgroundNoise(background_dir, p=0.75),
+            auds.OneOf(
+                [
+                    auds.Gain(p=1.0),
+                    auds.GainTransition(
+                        p=1.0, duration_unit="fraction", min_duration=0.2, max_duration=0.9
+                    ),
+                ],
+                p=0.8,
+            ),
+            auds.TimeStretch(
+                min_rate=0.8, max_rate=2.0, leave_length_unchanged=False, p=0.9
+            ),
+            InsertPause(
+                min_pause_duration=0.15,
+                max_pause_duration=0.80,
+                min_pauses=1,
+                max_pauses=3,
+                p=0.7,
+            ),
+            auds.ApplyImpulseResponse(
+                ir_path=rir_dir, leave_length_unchanged=False, p=0.5
+            ),
+            auds.OneOf(
+                [
+                    auds.BitCrush(p=1.0),
+                    auds.AddGaussianSNR(p=1.0),
+                    auds.TanhDistortion(p=1.0),
+                    auds.Mp3Compression(backend="fast-mp3-augment", p=1.0),
+                ],
+                p=0.8,
+            ),
+            auds.OneOf(
+                [
+                    auds.HighPassFilter(p=1.0),
+                    auds.BandPassFilter(p=1.0),
+                ],
+                p=0.8,
+            ),
+        ],
+        p=AUG_PROB,
+    )
 
 
 def patch_outer_forward(model):
@@ -364,8 +364,8 @@ def copy_required_hf_files_for_qwen_asr(src_dir: str, dst_dir: str):
 
 
 class MakeEveryCheckpointInferableCallback(TrainerCallback):
-    def __init__(self, base_model_path: str):
-        self.base_model_path = base_model_path
+    def __init__(self, processor):
+        self.processor = processor
 
     def on_save(self, args: TrainingArguments, state, control, **kwargs):
         if args.process_index != 0:
@@ -375,7 +375,7 @@ class MakeEveryCheckpointInferableCallback(TrainerCallback):
         if not os.path.isdir(ckpt_dir):
             ckpt_dir = kwargs.get("checkpoint", ckpt_dir)
 
-        copy_required_hf_files_for_qwen_asr(self.base_model_path, ckpt_dir)
+        self.processor.save_pretrained(ckpt_dir)
         return control
 
 
@@ -390,6 +390,9 @@ def parse_args():
 
     # Audio
     p.add_argument("--sr", type=int, default=16000)
+    p.add_argument("--background-dir", default="./backgrounds")
+    p.add_argument("--rir-dir", default="./Impulses")
+    p.add_argument("--no-augmentation", action="store_true")
 
     # Train hyper-params
     p.add_argument("--batch_size", type=int, default=32)
@@ -426,14 +429,17 @@ def main():
             "TRAIN_FILE is required (json/jsonl). Needs fields: audio, text, optional prompt"
         )
 
-    use_bf16 = torch.cuda.is_available() and torch.cuda.get_device_capability(0)[0] >= 8
+    use_cuda = torch.cuda.is_available()
+    use_bf16 = use_cuda and torch.cuda.is_bf16_supported()
+    augmentor = None if args_cli.no_augmentation else build_augmentor(args_cli.background_dir, args_cli.rir_dir)
     asr_wrapper = Qwen3ASRModel.from_pretrained(
         args_cli.model_path,
-        dtype=torch.bfloat16 if use_bf16 else torch.float16,
+        dtype=torch.bfloat16 if use_bf16 else (torch.float16 if use_cuda else torch.float32),
         device_map=None,
     )
     model = asr_wrapper.model
     processor = asr_wrapper.processor
+    processor.tokenizer.padding_side = "right"
 
     patch_outer_forward(model)
     model.generation_config = GenerationConfig.from_model_config(model.config)
@@ -477,7 +483,7 @@ def main():
         warmup_ratio=args_cli.warmup_ratio,
         dataloader_num_workers=args_cli.num_workers,
         dataloader_pin_memory=(args_cli.pin_memory == 1),
-        dataloader_persistent_workers=(args_cli.persistent_workers == 1),
+        dataloader_persistent_workers=(args_cli.persistent_workers == 1 and args_cli.num_workers > 0),
         dataloader_prefetch_factor=args_cli.prefetch_factor
         if args_cli.num_workers > 0
         else None,
@@ -485,25 +491,25 @@ def main():
         save_steps=args_cli.save_steps,
         save_total_limit=args_cli.save_total_limit,
         save_safetensors=True,
-        eval_strategy="steps",
+        eval_strategy="steps" if args_cli.eval_file else "no",
         eval_steps=args_cli.save_steps,
         do_eval=bool(args_cli.eval_file),
         bf16=use_bf16,
-        fp16=not use_bf16,
+        fp16=use_cuda and not use_bf16,
         ddp_find_unused_parameters=False,
         remove_unused_columns=False,
         report_to="none",
-        prediction_loss_only=False,
+        prediction_loss_only=True,
     )
     trainer = CastFloatInputsTrainer(
         model=model,
         args=training_args,
         train_dataset=ds["train"],
-        eval_dataset=ds["validation"],
+        eval_dataset=ds.get("validation"),
         data_collator=collator,
-        tokenizer=processor.tokenizer,
+        processing_class=processor,
         callbacks=[
-            MakeEveryCheckpointInferableCallback(base_model_path=args_cli.model_path)
+            MakeEveryCheckpointInferableCallback(processor)
         ],
     )
 
@@ -517,6 +523,10 @@ def main():
         trainer.train(resume_from_checkpoint=resume_from)
     else:
         trainer.train()
+
+    trainer.save_model(args_cli.output_dir)
+    if trainer.is_world_process_zero():
+        processor.save_pretrained(args_cli.output_dir)
 
 
 if __name__ == "__main__":

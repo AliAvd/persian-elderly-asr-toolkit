@@ -33,7 +33,7 @@ def add(number, name, composition, families=None, aug=False, exclude=None, mode=
                      'validation_manifest': f'data/manifests/{manifest_dir}/validation.jsonl' if mode == 'train' else None,
                      'tests': {s: f'data/manifests/{s}/test.jsonl' for s in tests}},
             'augmentation': {'enabled': aug, 'exclude': exclude or [], 'background_dir': 'data/augmentation/background_train', 'rir_dir': 'data/augmentation/rir_train'},
-            'training': {'output_dir': f'outputs/{scenario}/{family}', 'epochs': 10,
+            'training': {'output_dir': f'outputs/{scenario}/{family}', 'epochs': 20,
                          'batch_size': 1 if family == 'qwen' else 4, 'gradient_accumulation': 8,
                          'learning_rate': 2e-5 if family == 'qwen' else 3e-4, 'seed': 42},
         }

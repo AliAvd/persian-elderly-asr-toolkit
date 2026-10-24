@@ -26,7 +26,7 @@
   },
   "training": {
     "output_dir": "outputs/19_ablation_without_frequency/qwen",
-    "epochs": 10,
+    "epochs": 20,
     "batch_size": 1,
     "gradient_accumulation": 8,
     "learning_rate": 2e-05,

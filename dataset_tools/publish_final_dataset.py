@@ -17,7 +17,7 @@ def prepare_portable():
   for r in rows:
    source=Path(r['audio']);relative=Path('audio')/r['speaker_id']/source.name;target=portable/relative;target.parent.mkdir(parents=True,exist_ok=True)
    if not target.exists():target.hardlink_to(source)
-   qwen.append(dict(audio=relative.as_posix(),text='language Persian<asr_text>'+r['sentence'],speaker_id=r['speaker_id'],source_id=r['source_id'],duration=r['duration']))
+   qwen.append(dict(audio=relative.as_posix(),text='language Persian<asr_text>'+r['sentence'],speaker_id=r['speaker_id'],source_id=r['source_id'],duration=r['duration'],human_verified=r['human_verified']))
    manifest.append({**r,'audio':relative.as_posix()})
   for folder,values in [('qwen_jsonl',qwen),('manifests',manifest)]:
    path=portable/folder/(split+'.jsonl');path.parent.mkdir(exist_ok=True);path.write_text(''.join(json.dumps(r,ensure_ascii=False)+'\n' for r in values))

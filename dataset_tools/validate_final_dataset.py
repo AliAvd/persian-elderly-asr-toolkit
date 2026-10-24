@@ -31,6 +31,7 @@ def main():
  for split,values in splits.items():
   assert values
   assert all(not r['needs_review'] and normalize(r['sentence']) and 1<=r['duration']<=16 for r in values)
+  assert all(r['human_verified'] == (str(r['speaker_id']).strip().lower() in {'speaker_1','1'}) for r in values)
   q=read(HF/'qwen_jsonl'/(split+'.jsonl'));assert len(q)==len(values)
   assert all(r['audio']==v['audio'] and r['text']=='language Persian<asr_text>'+v['sentence'] for r,v in zip(q,values))
  ds=load_from_disk(str(HF))
@@ -41,6 +42,6 @@ def main():
  for folder in ['manifests','qwen_jsonl']:
   loaded=load_training_data({s+'_manifest':str(HF/folder/(s+'.jsonl')) for s in ['train','validation']})
   assert len(loaded['train'])==len(splits['train']) and len(loaded['validation'])==len(splits['validation'])
- result={'passed':True,'recordings':len(by),'chunks_checked':len(rows),'accepted':sum(map(len,splits.values())),'checks':['every audio decoded, mono16k PCM checksum and duration','every label exact source substring','all normalized reference words assigned once across accepted + review chunks','nonoverlapping chunk intervals within recordings','disjoint source/audio/PCM/transcript groups across splits','no empty accepted labels','DatasetDict load and embedded audio decoding','CTC and Qwen actual experiment training-data loaders'],'human_alignment_review':False}
+ result={'passed':True,'recordings':len(by),'chunks_checked':len(rows),'accepted':sum(map(len,splits.values())),'checks':['every audio decoded, mono16k PCM checksum and duration','every label exact source substring','all normalized reference words assigned once across accepted + review chunks','nonoverlapping chunk intervals within recordings','disjoint source/audio/PCM/transcript groups across splits','no empty accepted labels','DatasetDict load and embedded audio decoding','CTC and Qwen actual experiment training-data loaders'],'human_verified_speakers':['Speaker_1'],'human_alignment_review':False}
  (HF/'validation_report.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
 if __name__=='__main__':main()

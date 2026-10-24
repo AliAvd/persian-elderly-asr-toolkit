@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Persistent, resource-aware ten-epoch campaign. Never terminates other workloads."""
+"""Persistent, resource-aware twenty-epoch campaign. Never terminates other workloads."""
 import argparse,csv,datetime,fcntl,json,os,shutil,subprocess,sys,time
 from pathlib import Path
 from run_experiment import ROOT,resolve_config,validate
 
 PYTHON=Path(sys.executable)
-DEFAULT=ROOT/'runs/20260908_10epochs'
+DEFAULT=ROOT/'runs/20260908_20epochs'
 
 def stamp():return datetime.datetime.now(datetime.timezone.utc).isoformat()
 def read(path):return json.loads(Path(path).read_text())
@@ -18,7 +18,7 @@ def prepare(directory):
  jobs=[]
  for entry in read(ROOT/'catalog/index.json'):
   c=resolve_config(ROOT/entry['config']);name=c['experiment'];family=c['model']['family'];t=c['training']
-  t.update(epochs=10,max_steps=-1,output_dir=str(directory/'outputs'/name),save_total_limit=1,save_only_model=True,gradient_checkpointing=True)
+  t.update(epochs=20,max_steps=-1,output_dir=str(directory/'outputs'/name),save_total_limit=1,save_only_model=True,gradient_checkpointing=True)
   # One item per microbatch preserves the original effective batch through accumulation.
   t['gradient_accumulation']=t.get('gradient_accumulation',8)*t.get('batch_size',1);t['batch_size']=1
   checkpoint=c['model'].get('init_checkpoint')
@@ -40,11 +40,11 @@ def prepare(directory):
   jobs.append({'id':name,'kind':c['mode'],'config':str(cfg),'dependencies':dependency,'status':'pending','minimum_free_mb':minimum,'priority':priority,'attempts':0})
  jobs.append({'id':'prepare_teacher_filter','kind':'prepare','dependencies':[],'status':'pending','minimum_free_mb':6000,'priority':40,'attempts':0})
  write(directory/'jobs.json',jobs)
- write(directory/'campaign.json',{'created':stamp(),'epochs':10,'seed':42,'baselines':{j['id']:read(j['config'])['model'].get('init_checkpoint') for j in jobs if j['id'].startswith(('01_','02_'))},'gpu_policy':'Only currently free memory; never terminate other users; one campaign job per device','checkpoint_policy':'Final and best model weights saved; optimizer checkpoints omitted to fit campaign on available disk; failed training restarts rather than silently resuming with a fresh optimizer','scope':'60 catalog configurations plus teacher-data preparation; EARS excluded'})
+ write(directory/'campaign.json',{'created':stamp(),'epochs':20,'seed':42,'baselines':{j['id']:read(j['config'])['model'].get('init_checkpoint') for j in jobs if j['id'].startswith(('01_','02_'))},'gpu_policy':'Only currently free memory; never terminate other users; one campaign job per device','checkpoint_policy':'Final and best model weights saved; optimizer checkpoints omitted to fit campaign on available disk; failed training restarts rather than silently resuming with a fresh optimizer','scope':'60 catalog configurations plus teacher-data preparation; EARS excluded'})
  export(directory,jobs)
 
 def export(directory,jobs):
- rows=[];lines=['# Ten-epoch experiment results','',f'Updated: {stamp()}','', 'WER/CER are percentages. Raw and normalized values are separate. Pending and failed runs have no invented results. Baseline checkpoints are user-selected; their historical training/test overlap is not certified.','', '| Experiment | Status | Evaluation | Normalization | Samples | WER % | CER % |','|---|---|---|---|---:|---:|---:|']
+ rows=[];lines=['# Twenty-epoch experiment results','',f'Updated: {stamp()}','', 'WER/CER are percentages. Raw and normalized values are separate. Pending and failed runs have no invented results. Baseline checkpoints are user-selected; their historical training/test overlap is not certified.','', '| Experiment | Status | Evaluation | Normalization | Samples | WER % | CER % |','|---|---|---|---|---:|---:|---:|']
  for job in sorted(jobs,key=lambda j:j['id']):
   if job['kind']=='prepare':continue
   out=directory/'outputs'/job['id'];paths=sorted((out/'evaluation').glob('*.metrics.json'))
@@ -53,7 +53,7 @@ def export(directory,jobs):
    m=read(path);suite=path.name.removesuffix('.metrics.json');cfg=read(job['config'])
    for norm in ['raw','normalized']:
     wer=m[norm]['wer'];cer=m[norm]['cer'];w=wer*100 if wer is not None else None;c=cer*100 if cer is not None else None
-    row={'experiment':job['id'],'status':job['status'],'mode':job['kind'],'epochs_requested':10 if job['kind']=='train' else 0,'model':cfg['model']['family'],'initial_checkpoint':cfg['model'].get('init_checkpoint') or cfg['model']['pretrained'],'seed':42,'evaluation':suite,'normalization':norm,'samples':m['samples'],'failures':m['failures'],'wer_percent':w,'cer_percent':c,'rtf':m.get('real_time_factor'),'reference_words':m[norm]['reference_words'],'reference_characters':m[norm]['reference_characters'],'metrics_file':str(path),'predictions_file':str(path.with_name(suite+'.predictions.jsonl'))}
+    row={'experiment':job['id'],'status':job['status'],'mode':job['kind'],'epochs_requested':20 if job['kind']=='train' else 0,'model':cfg['model']['family'],'initial_checkpoint':cfg['model'].get('init_checkpoint') or cfg['model']['pretrained'],'seed':42,'evaluation':suite,'normalization':norm,'samples':m['samples'],'failures':m['failures'],'wer_percent':w,'cer_percent':c,'rtf':m.get('real_time_factor'),'reference_words':m[norm]['reference_words'],'reference_characters':m[norm]['reference_characters'],'metrics_file':str(path),'predictions_file':str(path.with_name(suite+'.predictions.jsonl'))}
     rows.append(row);ws='—' if w is None else f'{w:.4f}';cs='—' if c is None else f'{c:.4f}'
     lines.append(f"| {job['id']} | {job['status']} | {suite} | {norm} | {m['samples']} | {ws} | {cs} |")
  (directory/'RESULTS.md').write_text('\n'.join(lines)+'\n')

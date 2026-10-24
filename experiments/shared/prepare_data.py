@@ -86,7 +86,8 @@ def source_jobs(source):
         for r in read_rows(ASR/'Final_Gatheres_Dataset_Chunks/manifest.jsonl'):
             key=Path(r['audio']).stem
             if key not in splitmap:continue
-            row=dict(id='elderly_'+key,source=source,source_id='elderly:'+r['source_id'],speaker_id=r.get('speaker_id','unknown'),language='Persian',text=r['sentence'],split=splitmap[key],human_verified=False,alignment_method=r.get('alignment_method'),original_start=r['start'],original_end=r['end'])
+            speaker_id=str(r.get('speaker_id','unknown'))
+            row=dict(id='elderly_'+key,source=source,source_id='elderly:'+r['source_id'],speaker_id=speaker_id,language='Persian',text=r['sentence'],split=splitmap[key],human_verified=speaker_id.strip().lower() in {'speaker_1','1'},alignment_method=r.get('alignment_method'),original_start=r['start'],original_end=r['end'])
             yield row,r['audio'],.25,30
     elif source=='ganjoor':
         for i,r in enumerate(arrow_rows(sorted((ASR/'asr_dataset/train').glob('*.arrow')))):
@@ -158,7 +159,7 @@ def publish(source,rows,rejected):
         write_rows(MAN/source/'qwen'/path.name,qwen)
         stats[split]={'samples':len(values),'hours':sum(r['duration'] for r in values)/3600,'sha256':digest(path),'source_recordings':len(set(r['source_id'] for r in values))}
     write_rows(MAN/source/'rejected.jsonl',rejected)
-    write_json(MAN/source/'summary.json',{'source':source,'splits':stats,'rejected':len(rejected),'sample_rate':16000,'channels':1,'speaker_independent':False,'split_policy':'official/source-recording groups; canonical PCM duplicates removed; shared speakers allowed by user','senior_transcript_review':'automatic alignment not human-verified' if source=='elderly' else None,'upstream':'PerSets/filimo-persian-asr' if source=='filimo' else 'BAAI/SeniorTalk' if source=='seniortalk' else source})
+    write_json(MAN/source/'summary.json',{'source':source,'splits':stats,'rejected':len(rejected),'sample_rate':16000,'channels':1,'speaker_independent':False,'split_policy':'official/source-recording groups; canonical PCM duplicates removed; shared speakers allowed by user','senior_transcript_review':'Speaker_1 source recordings and transcripts human-reviewed; chunk boundaries automatically aligned' if source=='elderly' else None,'upstream':'PerSets/filimo-persian-asr' if source=='filimo' else 'BAAI/SeniorTalk' if source=='seniortalk' else source})
     print(source,json.dumps(stats),flush=True)
 
 def prepare(source,workers=8):

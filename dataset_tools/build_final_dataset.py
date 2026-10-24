@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Reference-based CTC alignment and reproducible exports of the final elderly corpus.
-No model training. Uncertain automatic alignment is quarantined, never human-verified.
+No model training. Uncertain automatic alignment is quarantined.
 """
 import argparse, collections, hashlib, json, os, re, subprocess, sys, time
 import os
@@ -14,6 +14,9 @@ from shared.training import restore_ctc_special_tokens
 CHUNKS=ROOT/'Final_Gatheres_Dataset_Chunks'
 HF=ROOT/'Final_Gathered_Dataset_HF'
 CHECKPOINT=Path(os.environ.get('ASR_WAV2VEC2_BASE_CHECKPOINT', str(ROOT/'wav2vec2_base/output_ver_1/checkpoint-547500'))).expanduser()
+
+def source_human_verified(speaker_id):
+ return str(speaker_id).strip().lower() in {'speaker_1','1'}
 
 def write(path,value):
  path=Path(path);path.parent.mkdir(parents=True,exist_ok=True);tmp=path.with_suffix(path.suffix+'.tmp');tmp.write_text(json.dumps(value,ensure_ascii=False,indent=2));tmp.replace(path)
@@ -54,7 +57,11 @@ def align_source(pair,processor,model,device):
  if done.exists() and meta.exists():
   previous=json.loads(meta.read_text())
   if previous['audio_sha256']!=pair['audio_sha256'] or previous['text_sha256']!=pair['text_sha256']:raise ValueError('Source changed: '+sid)
-  return read(done)
+  rows=read(done)
+  if any(r.get('human_verified') != source_human_verified(r['speaker_id']) for r in rows):
+   for r in rows:r['human_verified']=source_human_verified(r['speaker_id'])
+   jsonl(done,rows)
+  return rows
  decoded=subprocess.run(['ffmpeg','-v','error','-i',pair['audio'],'-f','f32le','-ac','1','-ar','16000','pipe:1'],capture_output=True,check=True)
  wave=np.frombuffer(decoded.stdout,dtype='<f4').copy();assert len(wave)>400 and np.isfinite(wave).all()
  lp=emissions(wave,processor,model,device)
@@ -96,7 +103,7 @@ def align_source(pair,processor,model,device):
   if any(w['unknown'] for w in g):reasons.append('unsupported_alignment_character')
   if cer>.45:reasons.append('alignment_cer_above_0.45')
   if not len(pcm) or not np.any(pcm):reasons.append('silent_audio')
-  row=dict(audio=str(audio),sentence=text,text=text,speaker_id=pair['speaker_id'],source_id=sid,chunk_id=chunk_id,source_audio=pair['audio'],source_text=pair['text'],source_audio_sha256=pair['audio_sha256'],source_text_sha256=pair['text_sha256'],start=start_sample/16000,end=end_sample/16000,duration=duration,text_start_char=g[0]['start_char'],text_end_char=g[-1]['end_char'],asr_prediction=pred,alignment_wer=wer,alignment_cer=cer,alignment_confidence=float(np.mean([w['confidence'] for w in g])),alignment_method='reference_ctc_forced_alignment',alignment_checkpoint=str(CHECKPOINT),human_verified=False,needs_review=bool(reasons),review_reasons=reasons,pcm_sha256=hashlib.sha256(pcm.tobytes()).hexdigest())
+  row=dict(audio=str(audio),sentence=text,text=text,speaker_id=pair['speaker_id'],source_id=sid,chunk_id=chunk_id,source_audio=pair['audio'],source_text=pair['text'],source_audio_sha256=pair['audio_sha256'],source_text_sha256=pair['text_sha256'],start=start_sample/16000,end=end_sample/16000,duration=duration,text_start_char=g[0]['start_char'],text_end_char=g[-1]['end_char'],asr_prediction=pred,alignment_wer=wer,alignment_cer=cer,alignment_confidence=float(np.mean([w['confidence'] for w in g])),alignment_method='reference_ctc_forced_alignment',alignment_checkpoint=str(CHECKPOINT),human_verified=source_human_verified(pair['speaker_id']),needs_review=bool(reasons),review_reasons=reasons,pcm_sha256=hashlib.sha256(pcm.tobytes()).hexdigest())
   rows.append(row);t=CHUNKS/'texts'/pair['speaker_id']/(chunk_id+'.txt');t.parent.mkdir(parents=True,exist_ok=True);t.write_text(text+'\n')
  jsonl(done,rows);write(meta,{**pair,'duration':len(wave)/16000,'chunks':len(rows),'accepted':sum(not r['needs_review'] for r in rows),'alignment_checkpoint':str(CHECKPOINT)})
  print(sid,'chunks',len(rows),'accepted',sum(not r['needs_review'] for r in rows),flush=True)
@@ -156,13 +163,13 @@ def export(rows):
  ds.save_to_disk(str(HF))
  for split,values in splits.items():
   jsonl(HF/'manifests'/(split+'.jsonl'),values)
-  jsonl(HF/'qwen_jsonl'/(split+'.jsonl'),[dict(audio=r['audio'],text='language Persian<asr_text>'+r['sentence'],speaker_id=r['speaker_id'],source_id=r['source_id'],duration=r['duration']) for r in values])
+  jsonl(HF/'qwen_jsonl'/(split+'.jsonl'),[dict(audio=r['audio'],text='language Persian<asr_text>'+r['sentence'],speaker_id=r['speaker_id'],source_id=r['source_id'],duration=r['duration'],human_verified=r['human_verified']) for r in values])
  jsonl(HF/'manifest.jsonl',[r for values in splits.values() for r in values]);jsonl(HF/'rejected.jsonl',rejected)
  allq=[dict(audio=r['audio'],text='language Persian<asr_text>'+r['sentence']) for values in splits.values() for r in values]
  for name in ['qwen_all.jsonl','qwen_al.jsonl']:jsonl(HF/name,allq);jsonl(CHUNKS/name,allq)
- summary={'source_recordings':len(pairs),'source_hours':sum(json.loads(p.read_text())['duration'] for p in (CHUNKS/'sources').glob('*.meta.json'))/3600,'all_chunks':len(rows),'accepted':len(accepted),'rejected':len(rejected),'splits':{s:{'samples':len(v),'hours':sum(r['duration'] for r in v)/3600,'sources':len({r['source_id'] for r in v}),'speakers':sorted({r['speaker_id'] for r in v})} for s,v in splits.items()},'seed':42,'split_policy':'source recording + identical source transcript/audio groups; shared speakers allowed; approximately 80/10/10 by group count within speaker strata; one-recording speaker remains train','speaker_independent':False,'human_verified':False,'alignment_quality_filter':'normalized greedy CTC CER <= 0.45; nonempty supported text; 1–16 seconds; nonzero PCM','alignment_checkpoint':str(CHECKPOINT),'leakage_audit':'disjoint source IDs, source audio hashes, PCM hashes, and duplicate-transcript groups across all splits'}
+ summary={'source_recordings':len(pairs),'source_hours':sum(json.loads(p.read_text())['duration'] for p in (CHUNKS/'sources').glob('*.meta.json'))/3600,'all_chunks':len(rows),'accepted':len(accepted),'rejected':len(rejected),'splits':{s:{'samples':len(v),'hours':sum(r['duration'] for r in v)/3600,'sources':len({r['source_id'] for r in v}),'speakers':sorted({r['speaker_id'] for r in v})} for s,v in splits.items()},'seed':42,'split_policy':'source recording + identical source transcript/audio groups; shared speakers allowed; approximately 80/10/10 by group count within speaker strata; one-recording speaker remains train','speaker_independent':False,'human_verified_speakers':['Speaker_1'],'human_verification_scope':'Speaker_1 source recordings and transcripts; chunk boundaries automatically aligned','alignment_quality_filter':'normalized greedy CTC CER <= 0.45; nonempty supported text; 1–16 seconds; nonzero PCM','alignment_checkpoint':str(CHECKPOINT),'leakage_audit':'disjoint source IDs, source audio hashes, PCM hashes, and duplicate-transcript groups across all splits'}
  write(HF/'processing_summary.json',summary);print(json.dumps(summary,indent=2),flush=True)
- (HF/'README.md').write_text('''---\nlanguage:\n- fa\ntask_categories:\n- automatic-speech-recognition\nconfigs:\n- config_name: default\n  data_files:\n  - split: train\n    path: data/train-*.parquet\n  - split: validation\n    path: data/validation-*.parquet\n  - split: test\n    path: data/test-*.parquet\n---\n# Final gathered Persian elderly speech\n\nPaired source recordings organized in speaker folders; exact counts are recorded in processing_summary.json. Reference transcripts were aligned with a historical Persian Wav2Vec2-base checkpoint, then cut at word boundaries into approximately 8-second chunks (maximum accepted duration 16 seconds). Labels are substrings of the supplied transcripts, not generated ASR labels. Automatic alignments are not human-verified. Uncertain chunks are excluded and listed in rejected.jsonl. Filtering using an ASR model can select easier speech; report this limitation when using this test set.\n\nSplits are deterministic by source recording and identical transcript/audio groups, stratified by speaker where at least three recordings exist. A speaker with only one recording remains in training. Speakers may overlap. These are not speaker-independent results. Full provenance and counts are in processing_summary.json. No license or public redistribution permission is inferred; this repository is private.\n\nUse `datasets.load_dataset("AliAvd/persian-elderly-asr")` for the default embedded-audio Parquet configuration. Local Arrow export: `datasets.load_from_disk("Final_Gathered_Dataset_HF")`. Qwen requires `language Persian<asr_text>` labels; local files are in qwen_jsonl/. Portable Hub manifests and audio are under portable/; run portable/materialize_qwen.py after snapshot_download to generate absolute local audio paths.\n''')
+ (HF/'README.md').write_text('''---\nlanguage:\n- fa\ntask_categories:\n- automatic-speech-recognition\nconfigs:\n- config_name: default\n  data_files:\n  - split: train\n    path: data/train-*.parquet\n  - split: validation\n    path: data/validation-*.parquet\n  - split: test\n    path: data/test-*.parquet\n---\n# Final gathered Persian elderly speech\n\nPaired source recordings organized in speaker folders; exact counts are recorded in processing_summary.json. Reference transcripts were aligned with a historical Persian Wav2Vec2-base checkpoint, then cut at word boundaries into approximately 8-second chunks (maximum accepted duration 16 seconds). Labels are substrings of the supplied transcripts, not generated ASR labels. Speaker_1 source recordings and transcripts were human-reviewed; derived rows have human_verified=true. Individual chunk boundaries were aligned automatically. Other speakers have human_verified=false. Uncertain chunks are excluded and listed in rejected.jsonl. Filtering using an ASR model can select easier speech; report this limitation when using this test set.\n\nSplits are deterministic by source recording and identical transcript/audio groups, stratified by speaker where at least three recordings exist. A speaker with only one recording remains in training. Speakers may overlap. These are not speaker-independent results. Full provenance and counts are in processing_summary.json. No license or public redistribution permission is inferred; this repository is private.\n\nUse `datasets.load_dataset("AliAvd/persian-elderly-asr")` for the default embedded-audio Parquet configuration. Local Arrow export: `datasets.load_from_disk("Final_Gathered_Dataset_HF")`. Qwen requires `language Persian<asr_text>` labels; local files are in qwen_jsonl/. Portable Hub manifests and audio are under portable/; run portable/materialize_qwen.py after snapshot_download to generate absolute local audio paths.\n''')
 
 if __name__=='__main__':
  p=argparse.ArgumentParser();p.add_argument('--limit',type=int);a=p.parse_args();build(a.limit)

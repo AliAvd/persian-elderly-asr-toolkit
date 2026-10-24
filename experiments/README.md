@@ -1,6 +1,6 @@
 # ASR experiment pipeline
 
-The catalog contains 30 scenarios and 60 model configurations for Qwen3-ASR, Wav2Vec2-base and XLSR-53: public Persian and elderly adaptation, SeniorTalk transfer, augmentation/ablations, teacher filtering, data-volume controls, long recordings and noisy evaluation. Configurations specify ten epochs. Single-experiment runs honor the catalog training budget; the campaign explicitly fixes ten epochs. Change the campaign implementation as well if a different campaign budget is required.
+The catalog contains 30 scenarios and 60 model configurations for Qwen3-ASR, Wav2Vec2-base and XLSR-53: public Persian and elderly adaptation, SeniorTalk transfer, augmentation/ablations, teacher filtering, data-volume controls, long recordings and noisy evaluation. Configurations specify twenty epochs. Single-experiment runs honor the catalog training budget; the campaign explicitly fixes twenty epochs. Change the campaign implementation as well if a different campaign budget is required.
 
 ## Environment
 

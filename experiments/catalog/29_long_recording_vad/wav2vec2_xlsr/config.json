@@ -21,7 +21,7 @@
   },
   "training": {
     "output_dir": "outputs/29_long_recording_vad/wav2vec2_xlsr",
-    "epochs": 10,
+    "epochs": 20,
     "batch_size": 4,
     "gradient_accumulation": 8,
     "learning_rate": 0.0003,

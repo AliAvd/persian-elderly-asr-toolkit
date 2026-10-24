@@ -33,7 +33,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--validation-jsonl", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--sample-rate", type=int, default=16_000)
-    parser.add_argument("--epochs", type=float, default=10)
+    parser.add_argument("--epochs", type=float, default=20)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--gradient-accumulation", type=int, default=2)
     parser.add_argument("--learning-rate", type=float, default=3e-4)

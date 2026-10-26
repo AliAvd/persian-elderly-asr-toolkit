@@ -27,7 +27,7 @@
   "training": {
     "output_dir": "outputs/14_ablation_without_pause/qwen",
     "epochs": 20,
-    "batch_size": 1,
+    "batch_size": 2,
     "gradient_accumulation": 8,
     "learning_rate": 2e-05,
     "seed": 42

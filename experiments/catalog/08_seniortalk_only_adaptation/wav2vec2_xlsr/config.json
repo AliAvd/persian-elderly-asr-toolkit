@@ -28,7 +28,7 @@
   "training": {
     "output_dir": "outputs/08_seniortalk_only_adaptation/wav2vec2_xlsr",
     "epochs": 20,
-    "batch_size": 4,
+    "batch_size": 64,
     "gradient_accumulation": 8,
     "learning_rate": 0.0003,
     "seed": 42
